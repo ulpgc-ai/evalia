@@ -1,7 +1,7 @@
 # TODO: reconvertir como unittest
 import ast
 
-from gpt_manager import GPTMockManager
+from evalia.gpt_manager import GPTMockManager
 
 # Me sitúo en la misma carpeta que el script
 # para poder leer los ficheros de prueba
@@ -27,4 +27,5 @@ def test_unoenuno():
     responses = gpt.send_queries(query_id="",query_list=queries)
     print(responses)
 
-pass
+#test_loteunico()
+#test_unoenuno()

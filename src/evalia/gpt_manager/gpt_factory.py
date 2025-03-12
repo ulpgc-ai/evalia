@@ -3,8 +3,8 @@ Fábrica simple de objetos GPTManager.
 Proporciona un manejador global de GPT.
 '''
 
-from gpt_manager import GPTManager
-from gpt_manager import GPTMockManager, GPTSmartManager, GPTBatchManager
+from . import GPTManager
+from . import GPTMockManager, GPTSmartManager, GPTBatchManager
 from typing import Dict
 
 mock_manager = GPTMockManager()

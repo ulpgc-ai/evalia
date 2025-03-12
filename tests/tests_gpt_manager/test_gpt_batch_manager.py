@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from gpt_manager.gpt_batch_manager import GPTBatchManager
+from evalia.gpt_manager.gpt_batch_manager import GPTBatchManager
 import time
 import random
 from unittest.mock import patch, mock_open

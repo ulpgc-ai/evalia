@@ -7,10 +7,10 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evaluators import BaseEvaluator, OUTPUT_DIR
+from evalia.evaluators import BaseEvaluator, OUTPUT_DIR
 
 # Para leer prompts desde ficheros de texto
-from prompt_sources import PromptFromTextFile
+from evalia.prompt_sources import PromptFromTextFile
 
 # Para configurar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4'

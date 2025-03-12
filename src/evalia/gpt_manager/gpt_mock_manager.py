@@ -2,15 +2,13 @@
 Versión mock de GPTManager.
 Procesa los mensajes sin dialogar realmente con GPT.
 """
-import sys
-sys.path.append('.')
 
-from gpt_manager import GPTManager, GPTTask
+from . import GPTManager, GPTTask
 from typing import Tuple
 import re
 import copy
 import openai.types.chat.chat_completion as chat
-from logs import get_logger
+from ..logs import get_logger
 
 logger = get_logger(__name__)
 

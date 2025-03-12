@@ -1,9 +1,9 @@
 import unittest
 
 import pandas as pd
-from evaluators import BaseEvaluator
-from prompt_sources import PromptFromString
-from gpt_manager import GPTManager, GPTSmartManager, GPTBatchManager
+from evalia.evaluators import BaseEvaluator
+from evalia.prompt_sources import PromptFromString
+from evalia.gpt_manager import GPTManager, GPTSmartManager, GPTBatchManager
 
 # Usamos un modelo mock para no generar interacción con OpenAI
 MODELO_GPT = 'gpt-4o-mini'

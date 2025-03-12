@@ -8,13 +8,13 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evaluators import BaseEvaluator, OUTPUT_DIR
+from evalia.evaluators import BaseEvaluator, OUTPUT_DIR
 
 # Para leer prompts desde cadenas de texto
-from prompt_sources import PromptFromString
+from evalia.prompt_sources import PromptFromString
 
 # Para trabajar con respuestas en formato JSON
-from gpt_response import GPTResponseJSON
+from evalia.gpt_response import GPTResponseJSON
 
 # Para configurar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4o-mini'

@@ -6,9 +6,8 @@ Implementation of a GPT Manager class to handle the OpenAI API restrictions.
 
 from collections import deque, namedtuple
 from typing import Tuple
-from gpt_manager import GPTManager
-from gpt_manager.gpt_manager import GPTTask
-from logs import get_logger
+from . import GPTManager, GPTTask
+from ..logs import get_logger
 
 from openai import OpenAI
 import time

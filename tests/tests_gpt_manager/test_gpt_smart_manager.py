@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch
-from gpt_manager.gpt_smart_manager import Request, RequestQueue, HistoryRecord, GPTSmartManager
+from evalia.gpt_manager.gpt_smart_manager import Request, RequestQueue, HistoryRecord, GPTSmartManager
 import time
 import random
 
