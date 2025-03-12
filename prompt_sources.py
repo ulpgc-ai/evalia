@@ -1,0 +1,128 @@
+""" 
+Clases que modelan la fuente de un prompt inicial.
+Tenemos estas clases:
+
+- PromptFromString: el prompt viene de una cadena de texto.
+- PromptFromTextFile: el prompt viene de un fichero de texto plano.
+- PromptFromJSON: el prompt viene de un fichero JSON (compatible con OpenAI).
+- PromptFromTemplate: el prompt viene de un fichero de texto plano con 
+  parámetros (suplidos como JSON).
+"""
+
+from abc import ABC, abstractmethod
+import ast
+
+class PromptSource(ABC):
+    '''Clase base para cualquier fuente que produce un prompt inicial'''
+
+    @abstractmethod
+    def get_prompt(self):
+        '''devuelve una cadena con un prompt apto para ingresar en GPT'''
+        return None
+
+class PromptFromString(PromptSource):
+    '''La fuente del prompt es un texto en memoria'''
+
+    def __init__(self,prompt_text):
+        self.prompt_text = prompt_text
+
+    def get_prompt(self):
+        prompt_preamble = [
+            {   "role": "system", 
+                "content": (
+                    "Eres un asistente colaborador. "
+                    "En tus respuestas cíñete estrictamente a las instrucciones dadas. "
+                    "No aportes explicaciones ni justificaciones adicionales."
+                )
+            },
+            {   "role": "user", 
+                "content": self.prompt_text },
+            {   'role': 'assistant', 
+                'content': 'Sí, he entendido las instrucciones. Pásame las respuestas para evaluar.' 
+            }
+        ]
+        return prompt_preamble
+
+class PromptFromTextFile(PromptSource):
+    '''La fuente del prompt es un fichero de texto plano'''
+
+    def __init__(self,prompt_filename):
+        self.prompt_filename = prompt_filename
+
+    def get_prompt(self):
+        with open(self.prompt_filename, 'r') as prompt_file:
+            prompt_text = prompt_file.read()
+        prompt_preamble = PromptFromString(prompt_text).get_prompt()
+        return prompt_preamble
+
+class PromptFromStringCoT(PromptSource):
+    '''La fuente del prompt es un texto en memoria.
+        Especialmente diseñado para Chain of Thought.
+    '''
+
+    def __init__(self,prompt_text):
+        self.prompt_text = prompt_text
+
+    def get_prompt(self):
+        prompt_preamble = [
+            {   "role": "system", 
+                "content": (
+                    "Actúa como un evaluador de pruebas académicas. "
+                    "En tus evaluaciones, desarrolla los razonamientos que llevan a tus conclusiones. "
+                    "Nunca alcances una conclusión sin haber explicitado el razonamiento previo. "
+                    "Cumple estrictamente las instrucciones sobre los formatos de tu respuesta."
+               )
+            },
+            {   "role": "user", 
+                "content": self.prompt_text },
+            {   'role': 'assistant', 
+                'content': 'He entendido las instrucciones. Pásame las respuestas para evaluar.' 
+            }
+        ]
+        return prompt_preamble
+
+
+class PromptFromTextFileCoT(PromptSource):
+    '''Igual que PromptFromTextFile, pero con un prompt especial para CoT'''
+    def __init__(self,prompt_filename):
+        self.prompt_filename = prompt_filename
+    
+    def get_prompt(self):
+        with open(self.prompt_filename, 'r') as prompt_file:
+            prompt_text = prompt_file.read()
+        prompt_preamble = PromptFromStringCoT(prompt_text).get_prompt()
+        return prompt_preamble
+
+class PromptFromJSON(PromptSource):
+    '''El prompt está escrito en el formato JSON de OpenAI'''
+
+    def __init__(self,prompt_filename):
+        self.prompt_filename = prompt_filename
+
+    def get_prompt(self):
+        with open(self.prompt_filename, 'r', 
+                encoding='UTF-8', errors='ignore') as prompt_file:
+            main_prompt = prompt_file.read()
+            prompt_preamble = ast.literal_eval(main_prompt)
+        return prompt_preamble
+
+class PromptFromTemplate(PromptSource):
+    '''El prompt viene de un fichero de texto plano con parámetros
+    Los parámetros se rellenan en un JSON aparte
+    '''
+    def __init__(self,prompt_filename,args_filename):
+        self.prompt_filename = prompt_filename
+        self.args_filename = args_filename
+
+    def get_prompt(self):
+        with open(self.prompt_filename, 'r',encoding='utf-8') as prompt_file:
+            template_text = prompt_file.read()
+        with open(self.args_filename, 'r',encoding='utf-8') as args_file:
+            arguments_raw = args_file.read()
+        arguments = ast.literal_eval(arguments_raw)
+        prompt_text = template_text
+        for key,value in arguments.items():
+            prompt_text = prompt_text.replace(key,value)      
+        prompt_preamble = PromptFromString(prompt_text).get_prompt()
+        return prompt_preamble
+

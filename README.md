@@ -1,0 +1,180 @@
+# EVALIA - paquete para evaluación automática mediante LLM
+
+Módulo Python para asistir en evaluación por IA, apoyada en la API de OpenAI (GPT).
+
+---
+© Universidad de Las Palmas de Gran Canaria, 2023-2025. Todos los derechos reservados.
+
+## Configuración
+
+### Dependencias
+Se requiere tener instalados estos módulos: 
+pandas, openpyxl, openai, tiktoken
+
+### Variables de entorno
+Para usar GPT hay que tener definida la variable de entorno `OPENAI_API_KEY`.
+
+La variable de entorno `OPENAI_TIER` se puede usar para indicar en qué nivel de 
+contrato está la cuenta de OpenAI. Esto se usará para controlar los límites 
+RPM y TPM de la interacción con GPT. Si la variable no está definida, se usará "Tier 1".
+Otros valores pueden ser "Tier 2", "Tier 3", "Tier 4" y "Tier 5".
+
+
+## Ejemplo básico
+
+Pueden verse varios ejemplos en la carpeta [examples](examples). 
+A continuación se muestra el ejemplo inicial, [example01.py](examples/example01.py).
+
+Este ejemplo básico está en [example01.py](examples/example01.py).
+
+```python
+import pandas as pd
+
+# Clase para evaluador automático
+from evaluators import BaseEvaluator, OUTPUT_DIR
+
+# Para leer prompts desde cadenas de texto
+from prompt_sources import PromptFromString
+
+# Para indicar el modelo GPT que se va a usar
+MODELO_GPT = 'gpt-3.5-turbo'
+
+# Un prompt
+mi_prompt = '''
+Eres un evaluador de geografía y te han pedido que evalúes si los estudiantes 
+conocen las capitales de los países europeos.
+Al estudiante se le da la siguiente instrucción:
+"escribe una lista de cinco capitales europeas".
+A continuación te pasaré una lista de respuestas de estudiantes. 
+Cada respuesta tiene un número de índice y la lista de ciudades.
+Tienes que calificar cada respuesta de la siguiente forma:
+1 = hay al menos cinco nombres y todos son capitales europeas.
+0 = cualquier otro caso.
+No importan las faltas de ortografía: 
+por ejemplo, considera correctas "Berlin" y "Verlin".
+Tu calificación debe venir en este formato: <número de respuesta>. <calificación>
+'''
+
+# Un conjunto de respuestas para evaluar
+respuestas_estudiantes = {
+    "respuesta": [
+        "Madrid, París, Berlín, Roma, Lisboa",
+        "Madriz, Paris, Verlin, Rroma, Lisbona", # con faltas de ortografía
+        "París, Londres",
+        "Pekín, Tokio, París, Roma, Copenhague, Londres",
+        "esto es una respuesta inválida",
+        "Madrid, París, Berlín, Roma, Lisboa, Londres",
+        "Barcelona, Londres, Rotterdam, Salzburgo"
+        ],
+    "calificación real": [1, 1, 0, 0, 0, 1, 0]
+}
+
+# El evaluador automático
+evaluador = BaseEvaluator(
+    evaluator_id = "capitales europeas",
+    student_responses = pd.DataFrame(respuestas_estudiantes),
+    responses_column = "respuesta",
+    prompt_source = PromptFromString(mi_prompt),
+    gpt_manager = MODELO_GPT,
+    query_batch_length=20
+)
+
+# El parámetro query_batch_length indica cómo se empaquetan las peticiones a GPT.
+# El valor 20 significa que las respuestas se enviarán a GPT en grupos de 20.
+
+# Ejecuta la evaluación y devuelve un dataframe con el resultado
+df_result = evaluador.run()
+
+print("Resultados:")
+print(df_result)
+
+# Imprime estadísticas: tokens y tiempo consumido
+print(evaluador.get_stats())
+
+# Guarda el resultado en un Excel
+df_result.to_excel(OUTPUT_DIR + "/example01.xlsx")
+```
+
+## Comentarios al ejemplo
+
+### Diseño del _prompt_
+
+Internamente, el framework usa un número de respuesta para asociar 
+las respuestas de GPT con los datos de origen. Es importante indicarlo a GPT:
+
+```
+Cada respuesta tiene un número de índice y la lista de ciudades.
+```
+
+También es importante indicarle a GPT cómo debe dar formato a
+sus evaluaciones. En este caso, le decimos que devuelva un número de respuesta 
+seguido de un punto y luego el texto de la evaluación:
+
+```
+Tu calificación debe venir en este formato: <número de respuesta>. <calificación>
+```
+
+Por defecto, en este framework se espera que el resultado de GPT sea de una única
+línea por cada respuesta evaluada. 
+El sistema está preparado para procesar resultados más complejos y flexibles, 
+por ejemplo que GPT devuelva objetos JSON. 
+Esto se controla mediante la clase `GPTResponse` y sus herederas.
+
+En el ejemplo [example02.py](examples/example02.py) se muestra cómo trabajar 
+con resultados en formato JSON.
+
+### DataFrame con el resultado 
+
+El _data frame_ con el resultado tiene la misma estructura que el original, 
+con dos columnas añadidas:
+
+- "Calificación GPT"
+- "Respuesta completa GPT"
+
+Por defecto, la columna "Respuesta completa GPT" tiene el texto de GPT, 
+sin procesar. La columna "Calificación GPT" tiene el texto, quitándole
+el número de índice de la respuesta.
+
+El programador puede sobreescribir el método
+`BaseEvaluator.postprocess_one_gpt_response()` para procesar la respuesta
+de GPT y obtener una calificación sencilla, que irá a 
+la columna "Calificación GPT". 
+El ejemplo [ejemplo03.py](examples/example03.py) tiene una muestra de cómo
+hacer ese tratamiento.
+
+### Agrupar las peticiones en lotes (query_batch_length)
+
+El parámetro `query_batch_length` indica cómo se empaquetan las peticiones a GPT. 
+El valor 20 del ejemplo significa que las respuestas 
+se enviarán a GPT en grupos de 20.
+El agrupamiento en lotes ayuda a reducir costes de uso del GPT, ya que todo el
+lote comparte un único _prompt_ de instrucciones.
+
+El tamaño del lote no afecta a la estructura o al contenido del _data frame_
+de respuesta.
+
+
+## Código fuente: Ficheros principales
+
+- __[evaluators.py](evaluators.py)__. Clases para implementar la evaluación de los ítems. Todas las evaluaciones implementan la interfaz de la clase abstracta `AbstractEvaluator`. La clase base concreta `BaseEvaluator` contiene una implementación totalmente funcional de todas las operaciones.
+- __[gpt_manager/gpt_manager.py](gpt_manager/gpt_manager.py)__. Clase abstracta `GPTManager`. 
+Una interfaz sencilla con la API de OpenAI, adaptada a nuestro sistema. 
+Implementa contención automática del tráfico con OpenAI,
+para evitar superar los límites de tokens por minuto y de peticiones por minuto.
+- __[gpt_response.py](gpt_response.py)__. Clases para el tratamiento de las evaluaciones procedentes de GPT. Se definen tres clases concretas: `GPTResponseOneLine`, `GPTResponseMultiline` y `GPTResponseJSON`, según si las respuestas vienen en una línea, en bloques de texto o en una lista JSON.
+- __[prompt_sources.py](prompt_sources.py)__. Clases que producen instrucciones (_prompts_) a partir de distintas fuentes: fichero de texto plano, fichero JSON, etc.
+
+## Arquitectura del software
+
+En el documento [class_architecture.md](class_architecture.md) se describe el diseño de clases Python de esta biblioteca.
+
+
+## Ficheros y resultados que genera la ejecución
+
+Cuando se ejecuta algún programa de prueba, esta biblioteca puede generar estos ficheros:
+
+- __Carpeta 'output'.__ En esta carpeta se pueden generar ficheros Excel con resultados de la evaluación \
+y también ficheros JSON con el volcado de las respuestas de GPT (para depuración).
+Se registran estadísticas de consumo de recursos en OpenAI (tiempo, tokens).
+- __app.log__ Archivo de registro (_log_) de la clase `GPTSmartManager`. Registra la actividad con GPT y las medidas de contención.
+
