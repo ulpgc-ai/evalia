@@ -11,7 +11,8 @@ authors = [
     { name = "Cayetano Guerra", email = "cayetano.guerra@ulpgc.es" }
 ]
 readme = "README.md"
-license = { text = "MIT" }
+# TODO: Add license file
+# license = { text = "MIT" }
 requires-python = ">=3.7"
 dependencies = [ "pandas", "openpyxl", "openai", "tiktoken" ]
 classifiers = [
