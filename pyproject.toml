@@ -21,7 +21,11 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["evalia*"]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
-packages = ["evalia"]
+packages = {find = {}}
 
