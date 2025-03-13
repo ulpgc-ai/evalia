@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "evalia"
+version = "0.1.0"
+description = "EVALIA - Evaluación con IA"
+authors = [
+    { name = "José Miguel Santos", email = "josemiguel.santos@ulpgc.es" },
+    { name = "Cayetano Guerra", email = "cayetano.guerra@ulpgc.es" }
+]
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.7"
+dependencies = [ "pandas", "openpyxl", "openai", "tiktoken" ]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = ["evalia"]
+

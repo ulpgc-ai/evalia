@@ -1,4 +1,4 @@
-# EVALIA - paquete para evaluación automática mediante LLM
+# EVALIA - módulo para evaluación automática mediante LLM
 
 Módulo Python para asistir en evaluación por IA, apoyada en la API de OpenAI (GPT).
 
@@ -7,16 +7,18 @@ Módulo Python para asistir en evaluación por IA, apoyada en la API de OpenAI (
 
 ## Configuración
 
-### Dependencias
-Se requiere tener instalados estos módulos: 
+### Instalación
+El módulo está preparado para instalarse con PIP.
+
+Se requiere tener instalados estos módulos (pip los instala automáticamente):
 pandas, openpyxl, openai, tiktoken
 
 ### Variables de entorno
-Para usar GPT hay que tener definida la variable de entorno `OPENAI_API_KEY`.
 
-La variable de entorno `OPENAI_TIER` se puede usar para indicar en qué nivel de 
-contrato está la cuenta de OpenAI. Esto se usará para controlar los límites 
-RPM y TPM de la interacción con GPT. Si la variable no está definida, se usará "Tier 1".
+* `OPENAI_API_KEY`. Para poder utilizar la API de OpenAI.
+* `OPENAI_TIER`. Opcional, para indicar en qué nivel de contrato está la cuenta de OpenAI. 
+Se usará para controlar los límites RPM y TPM de la interacción con GPT. 
+Si la variable no está definida, se usará "Tier 1".
 Otros valores pueden ser "Tier 2", "Tier 3", "Tier 4" y "Tier 5".
 
 
@@ -31,13 +33,13 @@ Este ejemplo básico está en [example01.py](examples/example01.py).
 import pandas as pd
 
 # Clase para evaluador automático
-from evaluators import BaseEvaluator, OUTPUT_DIR
+from evalia.evaluators import BaseEvaluator, OUTPUT_DIR
 
 # Para leer prompts desde cadenas de texto
-from prompt_sources import PromptFromString
+from evalia.prompt_sources import PromptFromString
 
 # Para indicar el modelo GPT que se va a usar
-MODELO_GPT = 'gpt-3.5-turbo'
+MODELO_GPT = 'gpt-4o-mini'
 
 # Un prompt
 mi_prompt = '''
@@ -156,13 +158,13 @@ de respuesta.
 
 ## Código fuente: Ficheros principales
 
-- __[evaluators.py](evaluators.py)__. Clases para implementar la evaluación de los ítems. Todas las evaluaciones implementan la interfaz de la clase abstracta `AbstractEvaluator`. La clase base concreta `BaseEvaluator` contiene una implementación totalmente funcional de todas las operaciones.
-- __[gpt_manager/gpt_manager.py](gpt_manager/gpt_manager.py)__. Clase abstracta `GPTManager`. 
+- __[evaluators.py](src/evalia/evaluators.py)__. Clases para implementar la evaluación de los ítems. Todas las evaluaciones implementan la interfaz de la clase abstracta `AbstractEvaluator`. La clase base concreta `BaseEvaluator` contiene una implementación totalmente funcional de todas las operaciones.
+- __[gpt_manager/gpt_manager.py](src/evalia/gpt_manager/gpt_manager.py)__. Clase abstracta `GPTManager`. 
 Una interfaz sencilla con la API de OpenAI, adaptada a nuestro sistema. 
 Implementa contención automática del tráfico con OpenAI,
 para evitar superar los límites de tokens por minuto y de peticiones por minuto.
-- __[gpt_response.py](gpt_response.py)__. Clases para el tratamiento de las evaluaciones procedentes de GPT. Se definen tres clases concretas: `GPTResponseOneLine`, `GPTResponseMultiline` y `GPTResponseJSON`, según si las respuestas vienen en una línea, en bloques de texto o en una lista JSON.
-- __[prompt_sources.py](prompt_sources.py)__. Clases que producen instrucciones (_prompts_) a partir de distintas fuentes: fichero de texto plano, fichero JSON, etc.
+- __[gpt_response.py](src/evalia/gpt_response.py)__. Clases para el tratamiento de las evaluaciones procedentes de GPT. Se definen tres clases concretas: `GPTResponseOneLine`, `GPTResponseMultiline` y `GPTResponseJSON`, según si las respuestas vienen en una línea, en bloques de texto o en una lista JSON.
+- __[prompt_sources.py](src/evalia/prompt_sources.py)__. Clases que producen instrucciones (_prompts_) a partir de distintas fuentes: fichero de texto plano, fichero JSON, etc.
 
 ## Arquitectura del software
 
@@ -171,10 +173,8 @@ En el documento [class_architecture.md](class_architecture.md) se describe el di
 
 ## Ficheros y resultados que genera la ejecución
 
-Cuando se ejecuta algún programa de prueba, esta biblioteca puede generar estos ficheros:
+Cuando se ejecuta Evalia o un programa de prueba, esta biblioteca puede generar estos ficheros:
 
-- __Carpeta 'output'.__ En esta carpeta se pueden generar ficheros Excel con resultados de la evaluación \
-y también ficheros JSON con el volcado de las respuestas de GPT (para depuración).
-Se registran estadísticas de consumo de recursos en OpenAI (tiempo, tokens).
-- __app.log__ Archivo de registro (_log_) de la clase `GPTSmartManager`. Registra la actividad con GPT y las medidas de contención.
+- __Carpeta 'output'.__ En esta carpeta se pueden generar todo tipo de ficheros de resultados: hojas Excel con resultados de la evaluación,  ficheros JSON con el volcado de las respuestas de GPT (para depuración), estadísticas de uso, etc.
+- __app.log__ Archivo de registro (_log_) de actividad de la aplicación.
 
