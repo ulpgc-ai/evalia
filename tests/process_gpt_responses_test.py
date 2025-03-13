@@ -2,7 +2,7 @@ import sys
 sys.path.append('.')
 import pandas as pd
 from evaluators import Evaluator
-from prompt_sources import PromptFromTextFile
+from prompts import PromptFromTextFile
 #from gpt_manager import GPTMockManager as GPTManager
 from gpt_manager import GPTSmartManager as GPTManager
 
@@ -23,7 +23,7 @@ evaluator = Evaluator(
     evaluator_id="test evaluator", 
     student_responses=test_dataframe,
     sample_selector=SLICE_RANGE,
-    prompt_source=test_prompt,
+    prompt=test_prompt,
     gpt_manager=gpt,
     query_batch_length=QUERY_BATCH_LENGTH,
 )

@@ -15,7 +15,7 @@ import os
 from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde cadenas de texto
-from evalia.prompt_sources import PromptFromString
+from evalia.prompts import PromptFromString
 
 # Para trabajar con respuestas en formato JSON
 from evalia.gpt_response import GPTResponseJSON
@@ -57,7 +57,7 @@ class Evaluador(Evaluator):
         super().__init__(
             evaluator_id = id,
             student_responses = pd.DataFrame(respuestas_estudiantes),
-            prompt_source = PromptFromString(PROMPT),
+            prompt = PromptFromString(PROMPT),
             gpt_response_class=GPTResponseJSON,
             gpt_manager = MODELO_GPT,
             batch_api=True,

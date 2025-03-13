@@ -7,7 +7,7 @@ import sys
 sys.path.append('.')
 import pandas as pd
 from evaluators import Evaluator
-from prompt_sources import PromptFromTextFile
+from prompts import PromptFromTextFile
 
 MODEL = "gpt-4"
 #MODEL = "gpt-3.5-turbo"
@@ -23,7 +23,7 @@ test_item = Evaluator(
     evaluator_id="test evaluator", 
     student_responses=test_dataframe,
     sample_selector=SLICE_RANGE,
-    prompt_source=test_prompt,
+    prompt=test_prompt,
     query_batch_length=QUERY_BATCH_LENGTH
 )
 

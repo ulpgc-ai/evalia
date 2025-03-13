@@ -12,7 +12,7 @@ import re
 from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde ficheros de texto
-from evalia.prompt_sources import PromptFromTextFile
+from evalia.prompts import PromptFromTextFile
 
 # Para configurar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4o-mini'
@@ -63,7 +63,7 @@ class EvaluadorOracionesCompuestas(Evaluator):
 evaluador = EvaluadorOracionesCompuestas(
     evaluator_id = "oraciones_compuestas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
-    prompt_source = prompt,
+    prompt = prompt,
     gpt_manager = MODELO_GPT,
     query_batch_length=20
 )

@@ -2,7 +2,7 @@ import unittest
 
 import pandas as pd
 from evalia.evaluators import Evaluator
-from evalia.prompt_sources import PromptFromString
+from evalia.prompts import PromptFromString
 from evalia.gpt_manager import GPTManager, GPTSmartManager, GPTBatchManager
 
 # Usamos un modelo mock para no generar interacción con OpenAI
@@ -41,7 +41,7 @@ class TestEvaluator(unittest.TestCase):
         return Evaluator(
             evaluator_id = "capitales europeas",
             student_responses = pd.DataFrame(respuestas_estudiantes),
-            prompt_source = PromptFromString(PROMPT),
+            prompt = PromptFromString(PROMPT),
             gpt_manager = 'mock',
             query_batch_length=20
         )

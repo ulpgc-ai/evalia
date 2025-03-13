@@ -44,7 +44,7 @@ import json
 import pickle
 
 from evalia.logs import get_logger
-from evalia.prompt_sources import PromptSource
+from evalia.prompts import PromptSource
 from evalia.gpt_manager import GPTManager, GPTTask, gpt_factory
 from evalia.gpt_response import GPTResponse, GPTResponseOneLine
 
@@ -141,7 +141,7 @@ class Evaluator(AbstractEvaluator):
                   evaluator_id='',
                   student_responses: pd.DataFrame = None,
                   responses_column: int | str = 0,
-                  prompt_source: PromptSource = None,
+                  prompt: PromptSource = None,
                   sample_selector = None,
                   gpt_manager: str | GPTManager = None,
                   model: str = None,
@@ -189,7 +189,7 @@ class Evaluator(AbstractEvaluator):
         self.evaluator_id = evaluator_id
         self.student_responses = student_responses
         self.responses_column = responses_column
-        self.prompt_source = prompt_source
+        self.prompt = prompt
         self.sample_selector = sample_selector
         self.query_batch_length = query_batch_length
         self.gpt_response_class = gpt_response_class
@@ -322,7 +322,7 @@ class Evaluator(AbstractEvaluator):
     ### --- end of persistence section
     
     def build_prompt_preamble(self):
-        return self.prompt_source.get_prompt()
+        return self.prompt.get_prompt()
         
     def read_sample_answers(self):
         '''Lee una muestra de respuestas de los estudiantes''' 

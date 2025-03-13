@@ -36,7 +36,7 @@ import pandas as pd
 from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde cadenas de texto
-from evalia.prompt_sources import PromptFromString
+from evalia.prompts import PromptFromString
 
 # Para indicar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4o-mini'
@@ -76,7 +76,7 @@ evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
     responses_column = "respuesta",
-    prompt_source = PromptFromString(mi_prompt),
+    prompt = PromptFromString(mi_prompt),
     gpt_manager = MODELO_GPT,
     query_batch_length=20
 )
@@ -164,7 +164,7 @@ Una interfaz sencilla con la API de OpenAI, adaptada a nuestro sistema.
 Implementa contención automática del tráfico con OpenAI,
 para evitar superar los límites de tokens por minuto y de peticiones por minuto.
 - __[gpt_response.py](src/evalia/gpt_response.py)__. Clases para el tratamiento de las evaluaciones procedentes de GPT. Se definen tres clases concretas: `GPTResponseOneLine`, `GPTResponseMultiline` y `GPTResponseJSON`, según si las respuestas vienen en una línea, en bloques de texto o en una lista JSON.
-- __[prompt_sources.py](src/evalia/prompt_sources.py)__. Clases que producen instrucciones (_prompts_) a partir de distintas fuentes: fichero de texto plano, fichero JSON, etc.
+- __[prompts.py](src/evalia/prompts.py)__. Clases que producen instrucciones (_prompts_) a partir de distintas fuentes: fichero de texto plano, fichero JSON, etc.
 
 ## Arquitectura del software
 

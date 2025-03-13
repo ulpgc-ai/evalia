@@ -9,7 +9,7 @@ import os
 from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde cadenas de texto
-from evalia.prompt_sources import PromptFromString
+from evalia.prompts import PromptFromString
 
 # Para configurar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4o-mini'
@@ -45,7 +45,7 @@ respuestas_estudiantes = {
 evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
-    prompt_source = PromptFromString(PROMPT),
+    prompt = PromptFromString(PROMPT),
     gpt_manager = MODELO_GPT,
     query_batch_length=20 # envía a GPT las respuestas en lotes de 20
 )

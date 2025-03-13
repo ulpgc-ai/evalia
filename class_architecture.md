@@ -64,7 +64,7 @@ classDiagram
     }
 
     Evaluator o-- "1" DataFrame: student_responses
-    Evaluator o-- "1" PromptSource: prompt_source
+    Evaluator o-- "1" PromptSource: prompt
     Evaluator o-- "1" GPTManager: gpt_manager
     Evaluator o-- "1" GPTResponse: (class object)
 
@@ -79,7 +79,7 @@ Se puede elegir cualquier otra columna del DataFrame, dando valor al atributo `r
 
 La operación `Evaluator.process_gpt_responses()` tomará una muestra
 de `student_responses` (seleccionada mediante `sample_selector`),
-la procesará con GPT según el _prompt_ definido en `prompt_source`, 
+la procesará con GPT según el _prompt_ definido en `prompt`, 
 y como resultado devolverá un DataFrame idéntico a la muestra, añadiendo
 dos columnas al final:
 
@@ -95,7 +95,7 @@ Cómo se resuelve la operación `Evaluator.run()`.
 sequenceDiagram
     participant Self as `:`
     participant E as Evaluator
-    participant PromptSource as prompt_source<br>:PromptSource
+    participant PromptSource as prompt<br>:PromptSource
     participant DataFrame as student_responses<br>:pd.DataFrame
     participant GPTManager as gpt_manager<br>:GPTManager
     Self->>E: run()
