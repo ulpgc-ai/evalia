@@ -6,7 +6,7 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evalia.evaluators import BaseEvaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompt_sources import PromptFromString
@@ -42,7 +42,7 @@ respuestas_estudiantes = {
 }
 
 
-evaluador = BaseEvaluator(
+evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
     prompt_source = PromptFromString(PROMPT),

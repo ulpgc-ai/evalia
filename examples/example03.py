@@ -1,7 +1,7 @@
 '''
 EJEMPLO 3. Evaluar capitales europeas.
 Partiendo del ejemplo 2 (repuesta JSON con comentarios),
-usamos el método BaseEvaluator.postprocess_one_gpt_response() para
+usamos el método Evaluator.postprocess_one_gpt_response() para
 extraer la calificación numérica y depositarla en la columna
 "Calificación GPT".
 
@@ -12,7 +12,7 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evalia.evaluators import BaseEvaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompt_sources import PromptFromString
@@ -52,7 +52,7 @@ respuestas_estudiantes = {
 
 
 # Definimos una nueva clase, ya que vamos a crear un método nuevo
-class Evaluador(BaseEvaluator):
+class Evaluador(Evaluator):
     def __init__(self, id):
         super().__init__(
             evaluator_id = id,
@@ -81,7 +81,7 @@ class Evaluador(BaseEvaluator):
 # El decorador "persistent" guarda el estado del objeto en un archivo
 # y permite reanudar la ejecución en otro momento.
 # La reanudación se hace volviendo a ejecutar este mismo programa.
-@BaseEvaluator.persistent
+@Evaluator.persistent
 def evaluador_persistente(id_evaluador):
     return Evaluador(id_evaluador)
 

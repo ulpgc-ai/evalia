@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.append('.')
 import pandas as pd
-from evalia.evaluators import BaseEvaluator
+from evalia.evaluators import Evaluator
 
 class TestSampleSelector(unittest.TestCase):
 
@@ -12,7 +12,7 @@ class TestSampleSelector(unittest.TestCase):
         test_dir = os.path.dirname(__file__)
         data_path = os.path.join(test_dir, "dataset_test_4ESO_15.xlsx")
         cls.test_dataframe = pd.read_excel(data_path)
-        cls.test_eva = BaseEvaluator(
+        cls.test_eva = Evaluator(
             evaluator_id="test evaluator", 
             student_responses=cls.test_dataframe,
         )

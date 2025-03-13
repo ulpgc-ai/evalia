@@ -1,7 +1,7 @@
 import unittest
 
 import pandas as pd
-from evalia.evaluators import BaseEvaluator
+from evalia.evaluators import Evaluator
 from evalia.prompt_sources import PromptFromString
 from evalia.gpt_manager import GPTManager, GPTSmartManager, GPTBatchManager
 
@@ -38,7 +38,7 @@ respuestas_estudiantes = {
 class TestEvaluator(unittest.TestCase):
 
     def new_evaluator(self):
-        return BaseEvaluator(
+        return Evaluator(
             evaluator_id = "capitales europeas",
             student_responses = pd.DataFrame(respuestas_estudiantes),
             prompt_source = PromptFromString(PROMPT),
@@ -47,7 +47,7 @@ class TestEvaluator(unittest.TestCase):
         )
     
     def test_init_gpt_manager(self):
-        evaluator1 = BaseEvaluator()
+        evaluator1 = Evaluator()
         self.assertEqual(evaluator1.gpt_manager, None)
         evaluator1.batch_api = True
         self.assertEqual(evaluator1.batch_api, True)
@@ -55,7 +55,7 @@ class TestEvaluator(unittest.TestCase):
         self.assertEqual(evaluator1.model, 'gpt-4')
         self.assertIsInstance(evaluator1.gpt_manager, GPTBatchManager)
 
-        evaluator2 = BaseEvaluator(gpt_manager='gpt-4')
+        evaluator2 = Evaluator(gpt_manager='gpt-4')
         self.assertIsInstance(evaluator2.gpt_manager, GPTManager)
         self.assertEqual(evaluator2.gpt_manager.model, 'gpt-4')
         self.assertEqual(evaluator2.gpt_manager.batch_api, False)
@@ -64,7 +64,7 @@ class TestEvaluator(unittest.TestCase):
         self.assertEqual(evaluator2.gpt_manager.model, 'gpt-4o')    
         self.assertEqual(evaluator2.gpt_manager.batch_api, False)
 
-        evaluator3 = BaseEvaluator(model='gpt-4o')
+        evaluator3 = Evaluator(model='gpt-4o')
         self.assertIsInstance(evaluator3.gpt_manager, GPTSmartManager)
         self.assertEqual(evaluator3.gpt_manager.model, 'gpt-4o')
         self.assertEqual(evaluator3.gpt_manager.batch_api, False)

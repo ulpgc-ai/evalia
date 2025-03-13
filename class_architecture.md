@@ -28,17 +28,17 @@ classDiagram
         process_gpt_responses()
         run()
     }
-    class BaseEvaluator {
+    class Evaluator {
         evaluator_id
         preprocess_one_answer(text)
         postprocess_one_gpt_response(text)
     }
-    AbstractEvaluator <|-- BaseEvaluator
-    BaseEvaluator <|-- ACCUEEItem
+    AbstractEvaluator <|-- Evaluator
+    Evaluator <|-- ACCUEEItem
 ```
 
-### BaseEvaluator: evaluador básico
-Un `BaseEvaluator`está compuesto de varios objetos,
+### Evaluator: evaluador básico
+Un `Evaluator`está compuesto de varios objetos,
 cada uno de los cuales tiene una responsabilidad dentro del
 procesamiento de las respuestas.
 
@@ -48,7 +48,7 @@ el comportamiento de cada ítem o modalidad concreta de evaluación.
 
 ```mermaid
 classDiagram
-    class BaseEvaluator {
+    class Evaluator {
         evaluator_id
         sample_selector
         responses_column
@@ -63,21 +63,21 @@ classDiagram
         send_queries()
     }
 
-    BaseEvaluator o-- "1" DataFrame: student_responses
-    BaseEvaluator o-- "1" PromptSource: prompt_source
-    BaseEvaluator o-- "1" GPTManager: gpt_manager
-    BaseEvaluator o-- "1" GPTResponse: (class object)
+    Evaluator o-- "1" DataFrame: student_responses
+    Evaluator o-- "1" PromptSource: prompt_source
+    Evaluator o-- "1" GPTManager: gpt_manager
+    Evaluator o-- "1" GPTResponse: (class object)
 
 ```
 
 ### El DataFrame con las respuestas de estudiantes
 El campo `student_responses` es un DataFrame de pandas
 cuya primera columna deben ser las respuestas de los estudiantes,
-que el `BaseEvaluator` evaluará.
+que el `Evaluator` evaluará.
 
 Se puede elegir cualquier otra columna del DataFrame, dando valor al atributo `responses_column`. Admite tanto un valor entero como un `str` con el nombre de la columna.
 
-La operación `BaseEvaluator.process_gpt_responses()` tomará una muestra
+La operación `Evaluator.process_gpt_responses()` tomará una muestra
 de `student_responses` (seleccionada mediante `sample_selector`),
 la procesará con GPT según el _prompt_ definido en `prompt_source`, 
 y como resultado devolverá un DataFrame idéntico a la muestra, añadiendo
@@ -87,14 +87,14 @@ dos columnas al final:
 - una columna con la descripción detallada de la calificación.
 
 
-### Operación BaseEvaluator.run()
+### Operación Evaluator.run()
 
-Cómo se resuelve la operación `BaseEvaluator.run()`.
+Cómo se resuelve la operación `Evaluator.run()`.
 
 ```mermaid
 sequenceDiagram
     participant Self as `:`
-    participant E as BaseEvaluator
+    participant E as Evaluator
     participant PromptSource as prompt_source<br>:PromptSource
     participant DataFrame as student_responses<br>:pd.DataFrame
     participant GPTManager as gpt_manager<br>:GPTManager
@@ -116,9 +116,9 @@ sequenceDiagram
     E-->>Self: dataframe with evaluations
 ```
 
-### Selector de muestras: BaseEvaluator.sample_selector
+### Selector de muestras: Evaluator.sample_selector
 
-La clase `BaseEvaluator` tiene un mecanismo muy potente para poder seleccionar
+La clase `Evaluator` tiene un mecanismo muy potente para poder seleccionar
 muestras dentro del DataFrame con las respuestas de estudiantes.
 
 La selección de muestras se realiza con el campo `sample_selector`, que puede ser 
@@ -141,7 +141,7 @@ usarán en los tests.
 
 ```mermaid
 classDiagram
-    class BaseEvaluator {
+    class Evaluator {
         evaluator_id
         run()
     }
@@ -151,11 +151,11 @@ classDiagram
         temperature
         sample_range
         log_file
-        add(evaluator:BaseEvaluator)
+        add(evaluator:Evaluator)
         run_one(id)
         run_all()
     }
-    Orchestra o-- "*" BaseEvaluator
+    Orchestra o-- "*" Evaluator
 ```
 
 Según vayamos elaborando objetos evaluadores, los vamos incorporando a `orchestra`

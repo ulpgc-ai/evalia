@@ -5,7 +5,7 @@ import copy
 import sys
 sys.path.append('.')
 
-from evaluators import BaseEvaluator
+from evaluators import Evaluator
 
 # Estructura similar a un ítem del dataset de la ACCUEE
 mock_dataframe = '''
@@ -67,7 +67,7 @@ chat_completion_mock = {
   }
 }
 
-class TestItem(BaseEvaluator):
+class TestItem(Evaluator):
 
     def read_sample_answers(self):
         self.sample_answers = pd.read_csv(

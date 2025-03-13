@@ -1,12 +1,12 @@
 # TEST: comprobar que se generan las queries correctamente
 # Se toma una muestra desde un dataset real
-# Se generan las queries con el método BaseEvaluator.build_gpt_queries()
+# Se generan las queries con el método Evaluator.build_gpt_queries()
 # Es importante jugar con el parámetro QUERY_BATCH_LENGTH
 
 import sys
 sys.path.append('.')
 import pandas as pd
-from evaluators import BaseEvaluator
+from evaluators import Evaluator
 from prompt_sources import PromptFromTextFile
 
 MODEL = "gpt-4"
@@ -19,7 +19,7 @@ SLICE_RANGE=slice(00,20)
 QUERY_BATCH_LENGTH = 7
 # probar valores como 1, 7, 20
 
-test_item = BaseEvaluator(
+test_item = Evaluator(
     evaluator_id="test evaluator", 
     student_responses=test_dataframe,
     sample_selector=SLICE_RANGE,

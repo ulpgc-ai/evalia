@@ -18,8 +18,8 @@ Estos métodos se orquestan en el siguiente método plantilla:
 - run(): ejecuta todos los pasos anteriores. Devuelve las respuestas, un DataFrame y
   el tiempo consumido
 
-class BaseEvaluator
--------------------
+class Evaluator
+---------------
 Clase concreta con la implementación básica para procesar un ítem típico y
 proporcionar una evaluación.
 Esta clase sirve para la mayoría de los prompts. Tiene un par de métodos
@@ -134,7 +134,7 @@ logger = get_logger(__name__)
 
 # --- clase base para casi cualquier ítem
 
-class BaseEvaluator(AbstractEvaluator):
+class Evaluator(AbstractEvaluator):
     '''Clase base para la mayoría de los ítems'''
 
     def __init__ (self, 
@@ -312,7 +312,7 @@ class BaseEvaluator(AbstractEvaluator):
     def persistent(cls,func):
         '''Decorator that loads the evaluator from a pickle file if it exists'''
         def f(item_id):
-            eva = BaseEvaluator.load_from_file(item_id)
+            eva = Evaluator.load_from_file(item_id)
             if eva is None:
                 return func(item_id)
             else:
@@ -531,7 +531,7 @@ def save_excel(df, ITEM, output_dir = OUTPUT_DIR):
         break
       counter += 1
 
-def simple_report(item : BaseEvaluator,
+def simple_report(item : Evaluator,
                   gpt_response, df_result, elapsed_time):
     print(f"elapsed time (secs): {elapsed_time}")
     print("tokens spent: ")
@@ -543,7 +543,7 @@ def simple_report(item : BaseEvaluator,
 
     save_excel(df_result,item.evaluator_id)
 
-def save_result(eva : BaseEvaluator):
+def save_result(eva : Evaluator):
     '''
     Imprime las estadísticas de la última evaluación
     y genera un archivo Excel con los resultados

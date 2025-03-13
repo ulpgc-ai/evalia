@@ -33,7 +33,7 @@ Este ejemplo básico está en [example01.py](examples/example01.py).
 import pandas as pd
 
 # Clase para evaluador automático
-from evalia.evaluators import BaseEvaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompt_sources import PromptFromString
@@ -72,7 +72,7 @@ respuestas_estudiantes = {
 }
 
 # El evaluador automático
-evaluador = BaseEvaluator(
+evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
     responses_column = "respuesta",
@@ -138,7 +138,7 @@ sin procesar. La columna "Calificación GPT" tiene el texto, quitándole
 el número de índice de la respuesta.
 
 El programador puede sobreescribir el método
-`BaseEvaluator.postprocess_one_gpt_response()` para procesar la respuesta
+`Evaluator.postprocess_one_gpt_response()` para procesar la respuesta
 de GPT y obtener una calificación sencilla, que irá a 
 la columna "Calificación GPT". 
 El ejemplo [ejemplo03.py](examples/example03.py) tiene una muestra de cómo
@@ -158,7 +158,7 @@ de respuesta.
 
 ## Código fuente: Ficheros principales
 
-- __[evaluators.py](src/evalia/evaluators.py)__. Clases para implementar la evaluación de los ítems. Todas las evaluaciones implementan la interfaz de la clase abstracta `AbstractEvaluator`. La clase base concreta `BaseEvaluator` contiene una implementación totalmente funcional de todas las operaciones.
+- __[evaluators.py](src/evalia/evaluators.py)__. Clases para implementar la evaluación de los ítems. Todas las evaluaciones implementan la interfaz de la clase abstracta `AbstractEvaluator`. La clase base concreta `Evaluator` contiene una implementación totalmente funcional de todas las operaciones.
 - __[gpt_manager/gpt_manager.py](src/evalia/gpt_manager/gpt_manager.py)__. Clase abstracta `GPTManager`. 
 Una interfaz sencilla con la API de OpenAI, adaptada a nuestro sistema. 
 Implementa contención automática del tráfico con OpenAI,

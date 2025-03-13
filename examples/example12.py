@@ -9,7 +9,7 @@ import os
 import re
 
 # Evaluador automático
-from evalia.evaluators import BaseEvaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde ficheros de texto
 from evalia.prompt_sources import PromptFromTextFile
@@ -31,7 +31,7 @@ respuestas_estudiantes = {
 PROMPT_FILE = "./examples/prompt_oraciones_compuestas.txt"
 prompt = PromptFromTextFile(PROMPT_FILE)
 
-class EvaluadorOracionesCompuestas(BaseEvaluator):
+class EvaluadorOracionesCompuestas(Evaluator):
 
     # constructor que pasa todos los argumentos a la clase base
     def __init__(self,*args,**kwargs):

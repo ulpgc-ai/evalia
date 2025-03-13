@@ -1,7 +1,7 @@
 import sys
 sys.path.append('.')
 import pandas as pd
-from evaluators import BaseEvaluator
+from evaluators import Evaluator
 from prompt_sources import PromptFromTextFile
 #from gpt_manager import GPTMockManager as GPTManager
 from gpt_manager import GPTSmartManager as GPTManager
@@ -19,7 +19,7 @@ QUERY_BATCH_LENGTH = 7
 gpt = GPTManager(GPT_MODEL)
 gpt.initialize()
 
-evaluator = BaseEvaluator(
+evaluator = Evaluator(
     evaluator_id="test evaluator", 
     student_responses=test_dataframe,
     sample_selector=SLICE_RANGE,

@@ -7,7 +7,7 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evalia.evaluators import BaseEvaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator, OUTPUT_DIR
 
 # Para leer prompts desde ficheros de texto
 from evalia.prompt_sources import PromptFromTextFile
@@ -30,7 +30,7 @@ respuestas_estudiantes = {
 PROMPT_FILE = "./examples/prompt_oraciones_compuestas.txt"
 prompt = PromptFromTextFile(PROMPT_FILE)
 
-evaluador = BaseEvaluator(
+evaluador = Evaluator(
     evaluator_id = "oraciones_compuestas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
     prompt_source = prompt,
