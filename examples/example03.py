@@ -18,7 +18,7 @@ from evalia.evaluators import Evaluator, OUTPUT_DIR
 from evalia.prompts import PromptFromString
 
 # Para trabajar con respuestas en formato JSON
-from evalia.gpt_response import GPTResponseJSON
+from evalia.gpt_responses import GPTResponseJSON
 
 # Para configurar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4o-mini'

@@ -159,20 +159,20 @@ class GPTResponseMultiLine(GPTResponse):
 
 # quick test
 if __name__ == '__main__':
-    response = (
+    raw_response = (
     "1. This is the first line\n"
     "2. This is the second line\n"
     "\n"
     "3. This is the third line\n"
     "This is the last line\n"
     )
-    print(response)
-    gpt_response = GPTResponseOneLine(response)
+    print(raw_response)
+    gpt_response = GPTResponseOneLine(raw_response)
     print(f"id: {gpt_response.get_index()}")
     print(f"assessment: {gpt_response.get_assessment()}")
     print(f"response: {gpt_response.get_full_response()}")
     print('-'*20)
-    gpt_response = GPTResponseMultiLine(response)
+    gpt_response = GPTResponseMultiLine(raw_response)
     print(f"id: {gpt_response.get_index()}")
     print(f"assessment: {gpt_response.get_assessment()}")
     print(f"response: {gpt_response.get_full_response()}")

@@ -46,7 +46,7 @@ import pickle
 from evalia.logs import get_logger
 from evalia.prompts import PromptSource
 from evalia.gpt_manager import GPTManager, GPTTask, gpt_factory
-from evalia.gpt_response import GPTResponse, GPTResponseOneLine
+from evalia.gpt_responses import GPTResponse, GPTResponseOneLine
 
 DEFAULT_TEMPERATURE = 0.0
 
