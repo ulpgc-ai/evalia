@@ -18,7 +18,7 @@ from . import GPTManager, GPTTask
 import os
 import json
 import time
-from ..logs import get_logger
+from src.evalia.logs import get_logger
 
 # OpenAI limits
 MAX_REQUESTS_PER_BATCH = 50_000

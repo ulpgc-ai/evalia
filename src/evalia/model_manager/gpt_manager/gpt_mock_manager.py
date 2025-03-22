@@ -8,7 +8,7 @@ from typing import Tuple
 import re
 import copy
 import openai.types.chat.chat_completion as chat
-from ..logs import get_logger
+from src.evalia.logs import get_logger
 
 logger = get_logger(__name__)
 

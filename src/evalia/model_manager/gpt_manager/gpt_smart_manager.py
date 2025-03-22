@@ -7,7 +7,7 @@ Implementation of a GPT Manager class to handle the OpenAI API restrictions.
 from collections import deque, namedtuple
 from typing import Tuple
 from . import GPTManager, GPTTask
-from ..logs import get_logger
+from src.evalia.logs import get_logger
 
 from openai import OpenAI
 import time
