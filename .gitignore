@@ -11,4 +11,4 @@ api_key
 .Rhistory
 build
 **/*.egg-info/
-
+.idea/
