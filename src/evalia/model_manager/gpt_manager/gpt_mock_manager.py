@@ -14,7 +14,7 @@ class GPTMockManager(ModelManager):
     def __init__(self):
         super().__init__(model="mock", api_key="mock-key")
 
-    def generate_text(self, prompt: str, system_context: str = "") -> ModelResponse:
+    def generate_text(self, prompt: str, system_context: str = "", temperature: str = "") -> ModelResponse:
         return ModelResponse(response="Mock response")
     
     def get_llm_name(self) -> str:

@@ -14,7 +14,7 @@ class ModelManager(ABC):
         self.model = model
 
     @abstractmethod
-    def generate_text(self, prompt: str, system_context: str = "") -> ModelResponse:
+    def generate_text(self, prompt: str, system_context: str = "", temperature: str = "") -> ModelResponse:
         pass
 
     @abstractmethod
