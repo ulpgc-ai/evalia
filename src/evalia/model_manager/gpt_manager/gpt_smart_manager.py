@@ -5,8 +5,12 @@ Implementation of a GPT Manager class to handle the OpenAI API restrictions.
 """
 
 from collections import deque, namedtuple
-from typing import Tuple
-from . import GPTManager, GPTTask
+from typing import Tuple, List, Union, Literal
+
+from openai.types.chat import ChatCompletionDeveloperMessageParam, ChatCompletionSystemMessageParam, \
+    ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, \
+    ChatCompletionFunctionMessageParam
+
 from src.evalia.logs import get_logger
 
 from openai import OpenAI
@@ -16,6 +20,8 @@ import tiktoken
 import datetime
 import os
 from dataclasses import dataclass
+
+from src.evalia.model_manager import ModelManager, ModelResponse
 
 ONE_MINUTE = 60  # One minute in seconds
 
@@ -101,7 +107,6 @@ class RequestQueue:
         self.start_time = None
         self.model = model
 
-        ONE_MINUTE = 60  # One minute in seconds
         OFFSET = 0.95  # 5% offset
         def cut_limit(nominal_limit):
             return int(nominal_limit * OFFSET)
@@ -184,22 +189,16 @@ class RequestQueue:
     
 
 
-class GPTSmartManager(GPTManager):
+class GPTSmartManager(ModelManager):
     """Class to handle the OpenAI API restrictions."""
 
-    def __init__(self, model="gpt-3.5-turbo"):
-        super().__init__()
-        self.model = model
-        self.temperature = 0.0
-        self.query_id = None
-        self.message = []
-        self.prelude = None
-        self._initialize_encoding()
-        self.request_queue = RequestQueue(model)
+    def __init__(self, api_key: str, model="gpt-3.5-turbo"):
+        super().__init__(model, api_key)
 
-        self.client = OpenAI(api_key=OPENAI_API_KEY)
+        self.request_queue = RequestQueue(model)
+        self.client = OpenAI(api_key=api_key)
         
-        logger.info(f"-----------------------------------")
+        logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
     def _initialize_encoding(self):
@@ -207,14 +206,9 @@ class GPTSmartManager(GPTManager):
             self.encoding = tiktoken.get_encoding("cl100k_base")
         else:
             self.encoding = tiktoken.encoding_for_model(self.model)
-            # self.encoding = tiktoken.get_encoding(self.model)
-
-    def initialize(self):
-        pass
 
     def count_tokens(self, messages):
         """Returns the number of tokens used by a list of messages."""
-        
         num_tokens = 0
         for message in messages:
             num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
@@ -225,30 +219,20 @@ class GPTSmartManager(GPTManager):
         num_tokens += 2  # every reply is primed with <im_start>assistant
         return num_tokens
     
-    def send_queries(self, query_id, query_list, temperature):
-        self.temperature = temperature
-        self.query_id = query_id
-        if isinstance(query_list, list) and all(isinstance(elem, list) for elem in query_list):
-            input_tokens = 0
-            output_tokens = 0
-            elapsed_time = 0
-            responses = []
-            for messages in query_list:
-                response = self.query(messages)
-                responses.append(response[0])
-                input_tokens += response[1]["input_tokens"]
-                output_tokens += response[1]["output_tokens"]
-                elapsed_time += response[1]["elapsed_time"]
-            return responses, {
-                "input_tokens": input_tokens,
-                "output_tokens": output_tokens,
-                "elapsed_time": elapsed_time
-                }
-        else:
-            return self.send_queries(query_id,[query_list],temperature)
-            
+    def generate_text(self, prompts: List[str], system_context: str = "", temperature: float = 0.0) -> List[ModelResponse]:
+        responses: List[ModelResponse] = []
+        for prompt in prompts:
+            response = self.query(prompt, system_context, temperature)
+            responses.append(ModelResponse(response = response[0].choices[0].message["content"],
+                                           elapsed_time = response[1]["elapsed_time"],
+                                           input_tokens = response[1]["input_tokens"],
+                                           output_tokens = response[1]["output_tokens"]
+                                           )
+                             )
+        return responses
+
     
-    def query(self, messages):
+    def query(self, message: str, system_context: str = "", temperature: float = 0.0):
         """
         Send a query to the OpenAI API.
         A query is a list of messages, each message is a dictionary with the following keys:
@@ -257,7 +241,7 @@ class GPTSmartManager(GPTManager):
         """
             
         # Before sending the messages, check if the restrictions are met int the last minute
-        nt = self.count_tokens(messages)  # Calculate the number of tokens in the message
+        nt = self.count_tokens(message)  # Calculate the number of tokens in the prompt
         self.request_queue.add(Request(nt + 6))  # Request creation with 6 extra tokens from the answer prompt
 
         chat_successful = False
@@ -265,29 +249,31 @@ class GPTSmartManager(GPTManager):
             try:
                 chat_completion = self.client.chat.completions.create(
                     model=self.model,
-                    messages=messages,
-                    temperature=self.temperature,
+                    messages=[GPTSmartManager.create_openai_message("system", system_context),
+                              GPTSmartManager.create_openai_message("user", message)
+                              ],
+                    temperature=temperature,
                     )
                 chat_successful = True
             except Exception as e:
-                log_message = f"{self.query_id} Ha ocurrido un error: {e}"
+                log_message = f"Ha ocurrido un error: {e}"
                 print(log_message)
                 logger.error(log_message)
                 chat_successful = False
                 time.sleep(5)
         
         elapsed_time = round(time.time() - self.request_queue.queue[-1].time, 3)
-        print(f"{self.query_id} Time: {elapsed_time} seconds")
+        print(f"Time: {elapsed_time} seconds")
 
         self.request_queue.modify_last_request(chat_completion.usage.total_tokens)
-        logger.info(f'"{self.query_id}" Tokens processed: {chat_completion.usage.total_tokens}')
-        logger.info(f'"{self.query_id}" Tokens in this current minute: {self.request_queue.current_minute_tokens}')
+        logger.info(f'"Tokens processed: {chat_completion.usage.total_tokens}')
+        logger.info(f'"Tokens in this current minute: {self.request_queue.current_minute_tokens}')
 
         response = chat_completion
         input_tokens = chat_completion.usage.prompt_tokens
         output_tokens = chat_completion.usage.completion_tokens
         logger.info((
-            f'"{self.query_id}" Finished. '
+            f'"Finished. '
             f'Input tokens: {input_tokens} '
             f'Output tokens: {output_tokens}'
             ))
@@ -296,30 +282,26 @@ class GPTSmartManager(GPTManager):
             "output_tokens": output_tokens,
             "elapsed_time": elapsed_time
             }
-        
-    class GPTSmartTask(GPTTask):
-        '''Dataclass to store the task information'''
-        def __init__(self, responses, stats):
-            self.responses = responses
-            self.stats = stats
-    
 
-    def start_task(self, query_id, query_list, temperature) -> GPTTask:
-        responses, stats = self.send_queries(query_id, query_list, temperature)
-        return self.GPTSmartTask(responses, stats)
+    @staticmethod
+    def create_openai_message(role: Literal['user', 'system'], prompt: str) -> Union[
+        ChatCompletionDeveloperMessageParam,
+        ChatCompletionSystemMessageParam,
+        ChatCompletionUserMessageParam,
+        ChatCompletionAssistantMessageParam,
+        ChatCompletionToolMessageParam,
+        ChatCompletionFunctionMessageParam,
+    ]:
+        return {
+            "role": role,
+            "content": [
+                {
+                    "type": "text",
+                    "text": prompt
+                }
+            ]
+        }
 
-    def cancel_task(self, task: GPTTask):
-        pass
-
-    def save_task(self, task: GPTTask, filename: str):
-        raise NotImplementedError("Esta clase no permite persistir el estado de una tarea.")
-    
-    def load_task(self, filename: str) -> GPTTask:
-        raise NotImplementedError("Esta clase no permite persistir el estado de una tarea.")
-    
-    def get_response(self, task: GPTSmartTask, timeout=0, retry=0) -> Tuple[list, dict]:
-        return task.responses, task.stats
-    
 if __name__ == "__main__":
     import os
     # Read file "query-4ESO-8.1-deunaenuna.txt"

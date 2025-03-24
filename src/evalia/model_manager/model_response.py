@@ -1,6 +1,6 @@
 class ModelResponse:
-    def __init__(self, response: str):
+    def __init__(self, response: str, elapsed_time: float, input_tokens: int, output_tokens: int):
         self.response: str = response
-        self.elapsed_time: float = 0.0
-        self.input_tokens: int = 0
-        self.output_tokens: int = 0
+        self.elapsed_time: float = elapsed_time
+        self.input_tokens: int = input_tokens
+        self.output_tokens: int = output_tokens

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import List
 
 from src.evalia.model_manager import ModelResponse
 
@@ -14,7 +15,7 @@ class ModelManager(ABC):
         self.model = model
 
     @abstractmethod
-    def generate_text(self, prompt: str, system_context: str = "", temperature: str = "") -> ModelResponse:
+    def generate_text(self, prompts: List[str], system_context: str = "", temperature: float = 0.0) -> List[ModelResponse]:
         pass
 
     @abstractmethod
