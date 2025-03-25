@@ -34,9 +34,7 @@ estos métodos.
 
 """
 
-from abc import ABC, abstractmethod
 from typing import Type
-import time
 import pandas as pd
 import os
 import re
@@ -47,6 +45,7 @@ from evalia.logs import get_logger
 from evalia.prompts import PromptSource
 from evalia.gpt_manager import GPTManager, GPTTask, gpt_factory
 from evalia.gpt_responses import GPTResponse, GPTResponseOneLine
+from . import Evaluator
 
 DEFAULT_TEMPERATURE = 0.0
 
@@ -63,78 +62,9 @@ GPT_TIMEOUT = 0
 # Tiempo de espera para reintentar obtener respuesta de GPT (segundos)
 GPT_RETRY = 1
 
-
-class AbstractEvaluator(ABC):
-    '''
-    Clase abstracta para la evaluación de un ítem
-    '''
-   
-    def __init__(self):
-      self.temperature = DEFAULT_TEMPERATURE
-   
-    @abstractmethod
-    def build_prompt_preamble(self):
-        '''return a dict list with a chat.completion conversation'''
-        pass
-   
-    @abstractmethod
-    def read_sample_answers(self):
-        '''return a DataFrame with a sample of student answers'''
-        pass
-
-    @abstractmethod
-    def build_gpt_queries(self):
-        '''
-        Transform the sample answers into a list of requests to be sent to GPT.
-        Return the GPT-enabled list.
-        '''
-        pass
-
-    @abstractmethod
-    def send_gpt_queries(self):
-        '''send the queries to GPT'''
-        pass
-
-    # TODO: rename this method as receive_gpt_responses()
-    @abstractmethod
-    def receive_gpt_responses_new(self):
-        '''receive responses from GPT. Return a list of responses.'''
-        pass
-
-    # TODO: rename this method as dialog_with_gpt()
-    @abstractmethod
-    def receive_gpt_responses(self):
-        '''(LEGACY) return a list of GPT responses'''
-
-    @abstractmethod
-    def get_stats(self):
-        '''return a dict with statistics'''
-        pass
-
-    @abstractmethod
-    def process_gpt_responses(self):
-        '''
-        Post-process the gpt response after it is received.
-        Return a DataFrame with added columns with the gpt
-        responses for each student answer.
-        '''
-        pass
-
-    def run(self):
-        '''template method that runs the whole evaluation process'''
-        self.build_gpt_queries()
-        self.send_gpt_queries()
-        self.receive_gpt_responses_new()
-        df_result = self.process_gpt_responses()
-        return df_result 
-
-
 # Logging
 logger = get_logger(__name__)
-
-# --- clase base para casi cualquier ítem
-
-class Evaluator(AbstractEvaluator):
+class Evaluator:
     '''Clase base para la mayoría de los ítems'''
 
     def __init__ (self, 
@@ -271,7 +201,7 @@ class Evaluator(AbstractEvaluator):
         return os.path.join(OUTPUT_DIR, evaluator_id + ".pkl")
     
     @classmethod
-    def load_from_file(cls, evaluator_id) -> AbstractEvaluator:
+    def load_from_file(cls, evaluator_id) -> Evaluator:
         '''Load a serialized evaluator from a pickle file'''
         filename = cls.pickle_filename(evaluator_id)
         # if filename exists, load the evaluator from the pickle
@@ -410,15 +340,6 @@ class Evaluator(AbstractEvaluator):
                 self.temperature)
             self._persist_evaluator()  
         return self.task
-
-    def receive_gpt_responses_new(self):
-        if self.gpt_responses is None:
-            self.send_gpt_queries()
-            self.gpt_responses, self.stats = self.gpt_manager.get_response(
-                self.task,
-                GPT_TIMEOUT, GPT_RETRY
-                )
-        return self.gpt_responses
 
     def receive_gpt_responses(self):
         if self.gpt_responses is None:
