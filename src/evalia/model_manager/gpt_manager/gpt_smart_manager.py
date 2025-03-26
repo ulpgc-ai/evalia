@@ -197,28 +197,10 @@ class GPTSmartManager(ModelManager):
 
         self.request_queue = RequestQueue(model)
         self.client = OpenAI(api_key=api_key)
-        
+
         logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
-    def _initialize_encoding(self):
-        if self.model.startswith("gpt-4"):
-            self.encoding = tiktoken.get_encoding("cl100k_base")
-        else:
-            self.encoding = tiktoken.encoding_for_model(self.model)
-
-    def count_tokens(self, messages):
-        """Returns the number of tokens used by a list of messages."""
-        num_tokens = 0
-        for message in messages:
-            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
-            for key, value in message.items():
-                num_tokens += len(self.encoding.encode(value))
-                if key == "name":  # if there's a name, the role is omitted
-                    num_tokens += -1  # role is always required and always 1 token
-        num_tokens += 2  # every reply is primed with <im_start>assistant
-        return num_tokens
-    
     def generate_text(self, prompts: List[str], system_context: str = "", temperature: float = 0.0) -> List[ModelResponse]:
         responses: List[ModelResponse] = []
         for prompt in prompts:
@@ -231,6 +213,27 @@ class GPTSmartManager(ModelManager):
                              )
         return responses
 
+    def get_llm_name(self) -> str:
+        return "OpenAI"
+
+    def _initialize_encoding(self):
+        if self.model.startswith("gpt-4"):
+            self.encoding = tiktoken.get_encoding("cl100k_base")
+        else:
+            self.encoding = tiktoken.encoding_for_model(self.model)
+    
+    def count_tokens(self, messages):
+        """Returns the number of tokens used by a list of messages."""
+        num_tokens = 0
+        for message in messages:
+            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+            for key, value in message.items():
+                num_tokens += len(self.encoding.encode(value))
+                if key == "name":  # if there's a name, the role is omitted
+                    num_tokens += -1  # role is always required and always 1 token
+        num_tokens += 2  # every reply is primed with <im_start>assistant
+        return num_tokens
+
     
     def query(self, message: str, system_context: str = "", temperature: float = 0.0):
         """
@@ -239,7 +242,7 @@ class GPTSmartManager(ModelManager):
         - name: name of the role
         - content: content of the message
         """
-            
+
         # Before sending the messages, check if the restrictions are met int the last minute
         nt = self.count_tokens(message)  # Calculate the number of tokens in the prompt
         self.request_queue.add(Request(nt + 6))  # Request creation with 6 extra tokens from the answer prompt
@@ -261,7 +264,7 @@ class GPTSmartManager(ModelManager):
                 logger.error(log_message)
                 chat_successful = False
                 time.sleep(5)
-        
+
         elapsed_time = round(time.time() - self.request_queue.queue[-1].time, 3)
         print(f"Time: {elapsed_time} seconds")
 
@@ -311,7 +314,7 @@ if __name__ == "__main__":
         query = f.read()
 
     messages_list = eval(query)
-    
+
     gm = GPTSmartManager(model="gpt-3.5-turbo")
     # for _ in range(1):
     #    for m in messages:
@@ -319,4 +322,4 @@ if __name__ == "__main__":
 
     print(gm.send_queries(1, messages_list[0], 0.9))
 
-    
+
