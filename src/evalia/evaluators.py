@@ -52,7 +52,7 @@ logger = get_logger(__name__)
 class Evaluator:
     '''Clase base para la mayoría de los ítems'''
 
-    def __init__ (self, 
+    def __init__ (self,
                   evaluator_id='',
                   student_responses: pd.DataFrame = None,
                   responses_column: int | str = 0,
@@ -79,7 +79,7 @@ class Evaluator:
         super().__init__()
 
         self.managers: List[ModelManager] = []
-        
+
         # Set other attributes
         self.evaluator_id = evaluator_id
         self.student_responses = student_responses
@@ -98,10 +98,13 @@ class Evaluator:
 
         logger.info(f'"{self.evaluator_id}" created')
 
+
+    def add_manager(self, manager: ModelManager):
+        self.managers.append(manager)
+
     # Load a serialized evaluator from a pickle file
     # so you can continue the evaluation process.
     # The object was serialized after executing send_gpt_queries()
-
     @classmethod
     def pickle_filename(cls, evaluator_id):
         return os.path.join(OUTPUT_DIR, evaluator_id + ".pkl")
@@ -119,14 +122,14 @@ class Evaluator:
         else:
             evaluator = None
         return evaluator
-    
+
     # Internal function called in send_gpt_queries()
     def _persist_evaluator(self):
         filename = self.pickle_filename(self.evaluator_id)
         with open(filename,"wb") as f:
             pickle.dump(self,f)
         logger.debug(f'"{self.evaluator_id}" saved to file "{filename}"')
-        
+
 
     # Redefine serialization. GPTSmartManager cannot be serialized
     # because it uses TikToken (a non-serializable module).
@@ -138,7 +141,7 @@ class Evaluator:
         state = self.__dict__.copy()
         self._gpt_manager = gpt_manager
         return state
-    
+
     def __setstate__(self,state):
         self.__dict__.update(state)
         self.gpt_manager = state['_gpt_manager']
@@ -155,14 +158,14 @@ class Evaluator:
             else:
                 return eva
         return f
-    
+
     ### --- end of persistence section
-    
+
     def build_prompt_preamble(self):
         return self.prompt.get_prompt()
-        
+
     def read_sample_answers(self):
-        '''Lee una muestra de respuestas de los estudiantes''' 
+        '''Lee una muestra de respuestas de los estudiantes'''
         if self.sample_answers is None:
             if self.sample_selector is None:
                 self.sample_answers = self.student_responses
@@ -178,7 +181,7 @@ class Evaluator:
             else:
                 raise TypeError("Tipo de selector no soportado.")
         return self.sample_answers
-    
+
     def preprocess_one_answer(self,text):
         '''(override this method as needed)
         transform one student answer from the dataframe
@@ -192,7 +195,7 @@ class Evaluator:
         json_student_answer = json.dumps(processed_answer)
         json_list = f'[ {index}, {json_student_answer} ]'
         return json_list
-            
+
     def build_gpt_queries(self):
         if self.queries is not None:
             return self.queries
@@ -213,10 +216,10 @@ class Evaluator:
             query_list = []
             for i in range(0,len(dataset_answers),self.query_batch_length):
                 batch_slice = dataset_answers.iloc[i:i+self.query_batch_length,:]
-                gpt_input_list = [ 
+                gpt_input_list = [
                     self.gpt_input_text(index,getcol(row))
-                    for index,row in batch_slice.iterrows() 
-                    ]
+                    for index,row in batch_slice.iterrows()
+                ]
                 batch_message = {
                     'role': 'user',
                     'content': '\n'.join(gpt_input_list)
@@ -230,10 +233,10 @@ class Evaluator:
                     'role': 'user',
                     'content': self.gpt_input_text(index,text)
                 }]
-                     
-            query_list = [ one_query(index,getcol(row)) 
-                           for index,row in dataset_answers.iterrows() 
-                         ]
+
+            query_list = [ one_query(index,getcol(row))
+                           for index,row in dataset_answers.iterrows()
+                           ]
 
         self.queries = query_list
         return self.queries
@@ -242,10 +245,10 @@ class Evaluator:
         if self.task is None:
             self.build_gpt_queries()
             self.task = self.gpt_manager.start_task(
-                self.evaluator_id, 
-                self.queries, 
+                self.evaluator_id,
+                self.queries,
                 self.temperature)
-            self._persist_evaluator()  
+            self._persist_evaluator()
         return self.task
 
     def receive_gpt_responses(self):
@@ -256,12 +259,12 @@ class Evaluator:
                 query_id=self.evaluator_id,
                 query_list=queries,
                 temperature=self.temperature
-                )
+            )
         return self.gpt_responses
-        
+
     def get_stats(self):
         return self.stats
-    
+
     def postprocess_one_gpt_response(self,text):
         '''(override this method as needed)
         transform a GPT response to an answer into a usable text
@@ -291,7 +294,7 @@ class Evaluator:
                     json.dump(dictlist,f,indent=2)
             except:
                 pass
-        
+
         save_gpt_responses(gpt_responses)
 
         # me obliga a usar la clase dos veces: como objeto y también como argumento
@@ -311,7 +314,7 @@ class Evaluator:
         self.result = df
         logger.info(f'"{self.evaluator_id}" run successfully')
         return df
-    
+
     def rerun_gpt_responses (self,gpt_responses_file):
         '''
         Vuelve a procesar las respuestas de GPT recibidas en una 
