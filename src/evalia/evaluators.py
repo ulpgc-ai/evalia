@@ -1,11 +1,11 @@
 """
-class AbstractEvaluator
------------------------
-Clase abstracta para la evaluación de un ítem.
+class Evaluator
+---------------
+Clase para procesar un ítem típico y proporcionar una evaluación.
+Esta clase sirve para la mayoría de los prompts. Tiene un par de métodos
+para tratar las respuestas antes y después de ser procesados por GPT:
 
-Métodos abstractos:
-
-- build_prompt_preamble(): produce un JSON con la conversación inicial que se 
+- build_prompt_preamble(): produce un JSON con la conversación inicial que se
   repite en todas las interacciones con GPT.
 - read_sample_answers(): lee una muestra de respuestas desde una fuente de datos (un DataFrame).
 - build_gpt_queries(): convierte la muestra en una colección de textos para el GPT.
@@ -18,13 +18,6 @@ Estos métodos se orquestan en el siguiente método plantilla:
 - run(): ejecuta todos los pasos anteriores. Devuelve las respuestas, un DataFrame y
   el tiempo consumido
 
-class Evaluator
----------------
-Clase concreta con la implementación básica para procesar un ítem típico y
-proporcionar una evaluación.
-Esta clase sirve para la mayoría de los prompts. Tiene un par de métodos
-para tratar las respuestas antes y después de ser procesados por GPT:
-
 - preprocess_one_answer(text) -> devuelve un texto listo para GPT
 - postprocess_one_gpt_response(text) -> nuevo texto listo para el DataFrame de respuesta
 
@@ -34,20 +27,18 @@ estos métodos.
 
 """
 
-from typing import Type
+from typing import Type, List
 import pandas as pd
 import os
 import re
 import json
 import pickle
 
-from evalia.logs import get_logger
-from evalia.prompts import PromptSource
-from evalia.gpt_manager import GPTManager, GPTTask, gpt_factory
-from evalia.gpt_responses import GPTResponse, GPTResponseOneLine
-from . import Evaluator
-
-DEFAULT_TEMPERATURE = 0.0
+from logs import get_logger
+from prompts import PromptSource
+from .model_manager.gpt_manager import gpt_factory
+from gpt_responses import GPTResponse, GPTResponseOneLine
+from model_manager import ModelManager
 
 # Columnas que añade el evaluador automático al DataFrame de respuestas
 COLNAME_GPT_GRADES = "evaluación GPT"
@@ -55,12 +46,6 @@ COLNAME_GPT_FULL_EVALUATIONS = "respuesta completa GPT"
 
 # Directorios para los resultados
 OUTPUT_DIR = os.path.join(os.path.expanduser("~"),"code/evalia/output")
-
-# Tiempo de espera para recibir respuesta de GPT (segundos)
-GPT_TIMEOUT = 0
-
-# Tiempo de espera para reintentar obtener respuesta de GPT (segundos)
-GPT_RETRY = 1
 
 # Logging
 logger = get_logger(__name__)
@@ -73,9 +58,6 @@ class Evaluator:
                   responses_column: int | str = 0,
                   prompt: PromptSource = None,
                   sample_selector = None,
-                  gpt_manager: str | GPTManager = None,
-                  model: str = None,
-                  batch_api: bool = False,
                   query_batch_length=20,
                   gpt_response_class: Type[GPTResponse] = GPTResponseOneLine
                   ):
@@ -90,30 +72,13 @@ class Evaluator:
           un slice (ej. slice(0,15)), una lista de índices (ej. [1,7,99]), un entero N que servirá para
           tomar una muestra aleatoria de N respuestas, o un objeto Callable
           (ej. una expresión lambda). Si se deja a None, se seleccionan todas las respuestas.
-        - gpt_manager: se puede aportar un objeto GPTManager ya inicializado. Si no se aporta, se
-          puede especificar el modelo de GPT que se usará
-        - model: el modelo de GPT que se usará, ej. 'gpt-4o' (argumento alternativo a gpt_manager).
-        - batch_api: si es True, se usará la API de lotes (Batch API) de OpenAI.
-        - query_batch_length: número de respuestas que se empaquetarán en cada consulta a GPT. 
+        - query_batch_length: número de respuestas que se empaquetarán en cada consulta a GPT.
           Vale cualquier valor entero de 1 en adelante.
         - gpt_response_class: modalidad de respuesta de GPT (una línea o varias líneas).
         '''
         super().__init__()
 
-        # Set GPT manager
-        self._gpt_manager = None
-        self._model = None
-        self._batch_api = batch_api
-        if gpt_manager is not None and model is not None:
-            raise ValueError(
-            "No se pueden especificar al mismo tiempo gpt_manager y model."
-            )
-        if model is not None:
-            self.gpt_manager = model
-        elif gpt_manager is not None:
-            self.gpt_manager = gpt_manager
-        else:
-            self._gpt_manager = None
+        self.managers: List[ModelManager] = []
         
         # Set other attributes
         self.evaluator_id = evaluator_id
@@ -125,72 +90,13 @@ class Evaluator:
         self.gpt_response_class = gpt_response_class
 
         # Reset execution state variables
-        self.reset()
-
-        logger.info(f'"{self.evaluator_id}" created')
-
-    # --- getters and setters for the GPTManager attributes
-
-    def _change_gpt_manager(self):
-        if self._model is not None:
-            self._gpt_manager = gpt_factory.get_manager(
-                model=self._model, batch_api=self._batch_api
-                )
-        else:
-            self._gpt_manager = None
-
-    @property
-    def gpt_manager(self) -> GPTManager:
-        return self._gpt_manager
-    
-    @gpt_manager.setter
-    def gpt_manager(self,gpt_manager):
-        if isinstance(gpt_manager,str):
-            self._model = gpt_manager
-            self._change_gpt_manager()
-        else:
-            manager:GPTManager = gpt_manager
-            self._gpt_manager = manager
-            self._model = manager.model
-            self._batch_api = manager.batch_api
-
-    @property
-    def model(self) -> str:
-        return self._model
-    
-    @model.setter
-    def model(self,model:str):
-        try:
-            old_model = self._model
-        except:
-            old_model = None
-        if model != old_model:
-            self._model = model
-            self._change_gpt_manager()
-            
-    @property
-    def batch_api(self) -> bool:
-        return self._batch_api
-    
-    @batch_api.setter
-    def batch_api(self,batch_api:bool):
-        try:
-            old_batch_api = self._batch_api
-        except:
-            old_batch_api = None
-        if batch_api != old_batch_api:
-            self._batch_api = batch_api
-            self._change_gpt_manager()
-
-    # --- end of getters and setters
-
-    def reset(self):
         self.sample_answers = None
         self.queries = None
-        self.task: GPTTask = None
         self.gpt_responses = None
         self.stats = None
         self.result = None
+
+        logger.info(f'"{self.evaluator_id}" created')
 
     # Load a serialized evaluator from a pickle file
     # so you can continue the evaluation process.
@@ -199,7 +105,8 @@ class Evaluator:
     @classmethod
     def pickle_filename(cls, evaluator_id):
         return os.path.join(OUTPUT_DIR, evaluator_id + ".pkl")
-    
+
+    # TODO fix this method. It's strange to have a class method that returns an instance of the same class
     @classmethod
     def load_from_file(cls, evaluator_id) -> Evaluator:
         '''Load a serialized evaluator from a pickle file'''
