@@ -8,10 +8,8 @@ Módulo Python para asistir en evaluación por IA, apoyada en la API de OpenAI (
 ## Configuración
 
 ### Instalación
-El módulo está preparado para instalarse con PIP.
-
-Se requiere tener instalados estos módulos (pip los instala automáticamente):
-pandas, openpyxl, openai, tiktoken
+El módulo está preparado para instalarse con PIP. 
+El archivo [pyproject.toml] indica las dependencias de este módulo.
 
 ### Variables de entorno
 
@@ -21,6 +19,9 @@ Se usará para controlar los límites RPM y TPM de la interacción con GPT.
 Si la variable no está definida, se usará "Tier 1".
 Otros valores pueden ser "Tier 2", "Tier 3", "Tier 4" y "Tier 5".
 
+* `EVALIA_CACHE_DIR` Ruta de los archivos temporales de la aplicación (archivos _pickle_). Si se omite, se usa la ruta por defecto para los archivos de caché de "evalia".
+* `EVALIA_LOG_DIR` Ruta de los archivos de registro (_logs_) de la aplicación. Si se omite, se usa la ruta por defecto del sistema operativo para los _logs_ de "evalia".
+* `EVALIA_RUN_HIGH_COST_TESTS` (para el desarrollador). Si vale 1, habilita la ejecución de unidades de test de alto coste potencial (que consumen mucho tiempo o que interactúan mucho con el motor de IA).
 
 ## Ejemplo básico
 
@@ -179,5 +180,4 @@ según el estándar de la máquina donde se ejecuta el módulo.
 - __app.log__ Archivo de registro (_log_) de actividad de la aplicación. 
 Se guarda en el directorio definido en la variable de entorno __EVALIA_LOG_DIR__ o, en su defecto, en la ruta de _logs_ de la aplicación "evalia", según el estándar
 de la máquina en la que se ejecuta el módulo (ej. C:\App Data\evalia\logs).
-
 
