@@ -20,10 +20,11 @@ class TestGPTBatchManager(unittest.TestCase):
         directorio_del_script = os.path.dirname(os.path.abspath(__file__))
         os.chdir(directorio_del_script)
 
+    @patch("os.path.getsize", return_value=1000)
     @patch("builtins.open", new_callable=mock_open)
-    def test_build_jsonl_file(self, mock_file):
+    def test_build_jsonl_file(self, mock_file, mock_getsize):
         gpt_manager = GPTBatchManager(model="gpt-4o-mini")
-        query_id = "test_query"
+        query_id = "test_build_jsonl_file"
         query_list = [
             [{"role": "user", "content": "Hola"}],
             [{"role": "user", "content": "How do you do?"}],
@@ -43,19 +44,19 @@ class TestGPTBatchManager(unittest.TestCase):
             '"messages": [{"role": "user", "content": "How do you do?"}] } }\n'
         )
 
+        # Mocked file writing and checking file size
         jsonl_filename = gpt_manager._build_jsonl_file(query_id, query_list, temperature)
 
-        # remove jsonl_filename
-        os.remove(jsonl_filename)
 
         mock_file.assert_called_once_with(f"{query_id}.jsonl", "w")
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[0])
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[1])
         self.assertEqual(jsonl_filename, f"{query_id}.jsonl")
 
+
     def test_start_task(self):
         gpt_manager = GPTBatchManager(model="gpt-4o-mini")
-        query_id = "test_query"
+        query_id = "test_start_task"
         query_list = [
             [{"role": "user", "content": "Hola"}],
             [{"role": "user", "content": "How do you do?"}],
@@ -81,7 +82,7 @@ class TestGPTBatchManager(unittest.TestCase):
             queries = query_file.read()
             queries = ast.literal_eval(queries)
         gpt_manager = GPTBatchManager(model="gpt-4o-mini")
-        query_id = "test_query"
+        query_id = "test_start_task_complex"
 
         task = gpt_manager.start_task(query_id, queries, temperature=0.7)
 
