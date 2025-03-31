@@ -193,45 +193,32 @@ class Evaluator:
     def build_gpt_queries(self):
         if self.queries is not None:
             return self.queries
-        prompt_preamble = self.build_prompt_preamble()
-        if isinstance(self.responses_column,int):
-            getcol = lambda x: x.iloc[self.responses_column]
-        elif isinstance(self.responses_column,str):
-            getcol = lambda x: x.loc[self.responses_column]
+        if isinstance(self.responses_column, int):
+            responses = self.sample_answers.iloc[:, self.responses_column]
+        elif isinstance(self.responses_column, str):
+            responses = self.sample_answers[self.responses_column]
         else:
             raise TypeError("Tipo de columna de respuestas no soportado.")
-
-        if self.query_batch_length > 1:
-            # partition the dataset into batches of self.query_batch_length consecutive answers
-            # each batch will be appended to query_list
-            # the last batch may be smaller than self.query_batch_length
-            query_list = []
-            for i in range(0, len(self.sample_answers), self.query_batch_length):
-                batch_slice = self.sample_answers.iloc[i:i + self.query_batch_length, :]
-                gpt_input_list = [
-                    self.gpt_input_text(index, getcol(row))
-                    for index, row in batch_slice.iterrows()
-                ]
-                batch_message = {
-                    'role': 'user',
-                    'content': '\n'.join(gpt_input_list)
-                }
-                query_slice = prompt_preamble + [batch_message]
-                query_list.append(query_slice)
-        else:
-
-            def one_query(index,text):
-                return prompt_preamble + [{
-                    'role': 'user',
-                    'content': self.gpt_input_text(index,text)
-                }]
-
-            query_list = [one_query(index, getcol(row))
-                          for index, row in self.sample_answers.iterrows()
-                          ]
-
-        self.queries = query_list
+        self.queries = [self.build_prompt_preamble() + batch for batch in self.partition_batches(responses)]
         return self.queries
+
+    def partition_batches(self, responses):
+        """ Divides the responses into batches according to `self.query_batch_length` """
+        total_responses = len(responses)
+        batches = []
+
+        for i in range(0, total_responses, self.query_batch_length):
+            batch = responses.iloc[i:i + self.query_batch_length]
+            batch_messages = [
+                {
+                    'role': 'user',
+                    'content': self.gpt_input_text(index, self.preprocess_one_answer(answer))
+                }
+                for index, answer in batch.items()
+            ]
+            batches.append(batch_messages)
+
+        return batches
 
     def send_gpt_queries(self):
         if self.task is None:
