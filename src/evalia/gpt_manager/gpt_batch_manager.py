@@ -72,7 +72,7 @@ class GPTBatchManager(GPTManager):
         )
 
         # Remove the JSONL file
-        # os.remove(batch_jsonl_file)
+        os.remove(batch_jsonl_file)
 
         # Create the batch in OpenAI
         batch = self.client.batches.create(
