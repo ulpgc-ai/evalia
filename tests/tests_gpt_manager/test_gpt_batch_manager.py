@@ -45,6 +45,9 @@ class TestGPTBatchManager(unittest.TestCase):
 
         jsonl_filename = gpt_manager._build_jsonl_file(query_id, query_list, temperature)
 
+        # remove jsonl_filename
+        os.remove(jsonl_filename)
+
         mock_file.assert_called_once_with(f"{query_id}.jsonl", "w")
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[0])
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[1])
