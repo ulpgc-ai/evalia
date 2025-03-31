@@ -1,54 +1,24 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, mock_open
 
 from evalia.gpt_manager.gpt_batch_manager import GPTBatchManager
+from .utils import high_cost
+
 import time
 import random
-from unittest.mock import patch, mock_open
 import ast
+import os
 
 QUERIES_FILE = "query-4ESO-17-deunaenuna.txt"
 
-# Me sitúo en la misma carpeta que el script
-# para poder leer los ficheros de prueba
-import os
-directorio_del_script = os.path.dirname(os.path.abspath(__file__))
-os.chdir(directorio_del_script)
-
-class GPTExcepcionError(Exception):
-    pass
-
-def mock_chat_completion_create(model, messages):
-    time.sleep(2)
-    print("------------------------------------------------------------------------")
-    print(" Mocking chat completion create ")
-    print("------------------------------------------------------------------------")
-    json = {
-            "choices": [
-                {
-                "finish_reason": "stop",
-                "index": 0,
-                "message": {
-                    "content": "\u00a1Hola! \u00bfEn qu\u00e9 puedo ayudarte hoy?",
-                    "role": "assistant"
-                }
-                }
-            ],
-            "created": 1697920381,
-            "id": "chatcmpl-8CCwXw1ilJeHwUJ8KQHl8zxQVsskB",
-            "model": "gpt-3.5-turbo-0613",
-            "object": "chat.completion",
-            "usage": {
-                "completion_tokens": 11,
-                "prompt_tokens": 8,
-                "total_tokens": 19
-            }
-    }
-    if random.random() < 0.5:
-        raise GPTExcepcionError("Ha habido una excepción desde la API de GPT")
-    return json
-        
 class TestGPTBatchManager(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        # Me sitúo en la misma carpeta que el script
+        # para poder leer los ficheros de datos
+        directorio_del_script = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(directorio_del_script)
 
     @patch("builtins.open", new_callable=mock_open)
     def test_build_jsonl_file(self, mock_file):
@@ -102,6 +72,7 @@ class TestGPTBatchManager(unittest.TestCase):
         # tear down
         gpt_manager.cancel_task(task)
     
+    @high_cost
     def test_start_task_complex(self):
         with open(QUERIES_FILE,'r',encoding='iso-8859-1') as query_file:
             queries = query_file.read()
@@ -111,6 +82,7 @@ class TestGPTBatchManager(unittest.TestCase):
 
         task = gpt_manager.start_task(query_id, queries, temperature=0.7)
 
+    @high_cost
     def test_get_response(self):
         with open(QUERIES_FILE,'r',encoding='iso-8859-1') as query_file:
             queries = query_file.read()
@@ -121,6 +93,41 @@ class TestGPTBatchManager(unittest.TestCase):
         task = gpt_manager.start_task(query_id, queries, temperature=0.7)
         response = gpt_manager.get_response(task)
         print(response)
+
+
+class GPTExceptionError(Exception):
+    pass
+
+def mock_chat_completion_create(model, messages):
+    time.sleep(2)
+    print("------------------------------------------------------------------------")
+    print(" Mocking chat completion create ")
+    print("------------------------------------------------------------------------")
+    json = {
+            "choices": [
+                {
+                "finish_reason": "stop",
+                "index": 0,
+                "message": {
+                    "content": "\u00a1Hola! \u00bfEn qu\u00e9 puedo ayudarte hoy?",
+                    "role": "assistant"
+                }
+                }
+            ],
+            "created": 1697920381,
+            "id": "chatcmpl-8CCwXw1ilJeHwUJ8KQHl8zxQVsskB",
+            "model": "gpt-3.5-turbo-0613",
+            "object": "chat.completion",
+            "usage": {
+                "completion_tokens": 11,
+                "prompt_tokens": 8,
+                "total_tokens": 19
+            }
+    }
+    if random.random() < 0.5:
+        raise GPTExceptionError("Ha habido una excepción desde la API de GPT")
+    return json
+        
 
 @unittest.skip("Skip this class for now")
 class TestGPTManager(unittest.TestCase):
