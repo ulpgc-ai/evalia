@@ -8,8 +8,10 @@ Módulo Python para asistir en evaluación por IA, apoyada en la API de OpenAI (
 ## Configuración
 
 ### Instalación
+
 El módulo está preparado para instalarse con PIP. 
-El archivo [pyproject.toml] indica las dependencias de este módulo.
+
+El archivo [pyproject.toml](pyproject.toml) indica las dependencias de este módulo.
 
 ### Variables de entorno
 
