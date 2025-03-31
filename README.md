@@ -33,7 +33,7 @@ Este ejemplo básico está en [example01.py](examples/example01.py).
 import pandas as pd
 
 # Clase para evaluador automático
-from evalia.evaluators import Evaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompts import PromptFromString
@@ -92,9 +92,6 @@ print(df_result)
 
 # Imprime estadísticas: tokens y tiempo consumido
 print(evaluador.get_stats())
-
-# Guarda el resultado en un Excel
-df_result.to_excel(OUTPUT_DIR + "/example01.xlsx")
 ```
 
 ## Comentarios al ejemplo
@@ -171,10 +168,16 @@ para evitar superar los límites de tokens por minuto y de peticiones por minuto
 En el documento [class_architecture.md](class_architecture.md) se describe el diseño de clases Python de esta biblioteca.
 
 
-## Ficheros y resultados que genera la ejecución
+## Ficheros que genera la ejecución de EVALIA
 
 Cuando se ejecuta Evalia o un programa de prueba, esta biblioteca puede generar estos ficheros:
 
-- __Carpeta 'output'.__ En esta carpeta se pueden generar todo tipo de ficheros de resultados: hojas Excel con resultados de la evaluación,  ficheros JSON con el volcado de las respuestas de GPT (para depuración), estadísticas de uso, etc.
-- __app.log__ Archivo de registro (_log_) de actividad de la aplicación.
+- __Ficheros pickle__ Se usan para persistir los objetos cuando se ejecutan tareas 
+en modo lote (_batch_). Se almacenan en el directorio definido en la variable de entorno
+__EVALIA_CACHE_DIR__ o, en su defecto, en la ruta de cachés de la aplicación "evalia", 
+según el estándar de la máquina donde se ejecuta el módulo.
+- __app.log__ Archivo de registro (_log_) de actividad de la aplicación. 
+Se guarda en el directorio definido en la variable de entorno __EVALIA_LOG_DIR__ o, en su defecto, en la ruta de _logs_ de la aplicación "evalia", según el estándar
+de la máquina en la que se ejecuta el módulo (ej. C:\App Data\evalia\logs).
+
 
