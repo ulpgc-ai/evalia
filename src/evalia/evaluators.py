@@ -7,7 +7,6 @@ para tratar las respuestas antes y después de ser procesados por GPT:
 
 - build_prompt_preamble(): produce un JSON con la conversación inicial que se
   repite en todas las interacciones con GPT.
-- read_sample_answers(): lee una muestra de respuestas desde una fuente de datos (un DataFrame).
 - build_gpt_queries(): convierte la muestra en una colección de textos para el GPT.
 - receive_gpt_responses(): recibe las respuestas de GPT en el JSON de OpenAI.
 - process_gpt_responses(): transforma las respuestas de GPT en un DataFrame listo para explotar.
@@ -59,7 +58,8 @@ class Evaluator:
                   prompt: PromptSource = None,
                   sample_selector = None,
                   query_batch_length=20,
-                  gpt_response_class: Type[GPTResponse] = GPTResponseOneLine
+                  gpt_response_class: Type[GPTResponse] = GPTResponseOneLine,
+                  temperature: float = 0.0
                   ):
         '''
         Args:
@@ -86,18 +86,30 @@ class Evaluator:
         self.responses_column = responses_column
         self.prompt = prompt
         self.sample_selector = sample_selector
+        if self.sample_selector is None:
+            self.sample_answers = self.student_responses
+        elif isinstance(self.sample_selector, int):
+            self.sample_answers = self.student_responses.sample(n=self.sample_selector, random_state=42)
+        elif isinstance(self.sample_selector, slice):
+            self.sample_answers = self.student_responses[self.sample_selector]
+        elif isinstance(self.sample_selector, list):
+            intersection = self.student_responses.index.intersection(self.sample_selector)
+            self.sample_answers = self.student_responses.iloc[intersection]
+        elif callable(self.sample_selector):
+            self.sample_answers = self.sample_selector(self.student_responses)
+        else:
+            raise TypeError("Tipo de selector no soportado.")
         self.query_batch_length = query_batch_length
         self.gpt_response_class = gpt_response_class
+        self.temperature = temperature
 
         # Reset execution state variables
-        self.sample_answers = None
         self.queries = None
         self.gpt_responses = None
         self.stats = None
         self.result = None
 
         logger.info(f'"{self.evaluator_id}" created')
-
 
     def add_manager(self, manager: ModelManager):
         self.managers.append(manager)
@@ -164,24 +176,6 @@ class Evaluator:
     def build_prompt_preamble(self):
         return self.prompt.get_prompt()
 
-    def read_sample_answers(self):
-        '''Lee una muestra de respuestas de los estudiantes'''
-        if self.sample_answers is None:
-            if self.sample_selector is None:
-                self.sample_answers = self.student_responses
-            elif isinstance(self.sample_selector,int):
-                self.sample_answers = self.student_responses.sample(n=self.sample_selector,random_state=42)
-            elif isinstance(self.sample_selector,slice):
-                self.sample_answers = self.student_responses[self.sample_selector]
-            elif isinstance(self.sample_selector,list):
-                intersection = self.student_responses.index.intersection(self.sample_selector)
-                self.sample_answers = self.student_responses.iloc[intersection]
-            elif callable(self.sample_selector):
-                self.sample_answers = self.sample_selector(self.student_responses)
-            else:
-                raise TypeError("Tipo de selector no soportado.")
-        return self.sample_answers
-
     def preprocess_one_answer(self,text):
         '''(override this method as needed)
         transform one student answer from the dataframe
@@ -200,8 +194,6 @@ class Evaluator:
         if self.queries is not None:
             return self.queries
         prompt_preamble = self.build_prompt_preamble()
-        dataset_answers = self.read_sample_answers()
-
         if isinstance(self.responses_column,int):
             getcol = lambda x: x.iloc[self.responses_column]
         elif isinstance(self.responses_column,str):
@@ -214,11 +206,11 @@ class Evaluator:
             # each batch will be appended to query_list
             # the last batch may be smaller than self.query_batch_length
             query_list = []
-            for i in range(0,len(dataset_answers),self.query_batch_length):
-                batch_slice = dataset_answers.iloc[i:i+self.query_batch_length,:]
+            for i in range(0, len(self.sample_answers), self.query_batch_length):
+                batch_slice = self.sample_answers.iloc[i:i + self.query_batch_length, :]
                 gpt_input_list = [
-                    self.gpt_input_text(index,getcol(row))
-                    for index,row in batch_slice.iterrows()
+                    self.gpt_input_text(index, getcol(row))
+                    for index, row in batch_slice.iterrows()
                 ]
                 batch_message = {
                     'role': 'user',
@@ -234,9 +226,9 @@ class Evaluator:
                     'content': self.gpt_input_text(index,text)
                 }]
 
-            query_list = [ one_query(index,getcol(row))
-                           for index,row in dataset_answers.iterrows()
-                           ]
+            query_list = [one_query(index, getcol(row))
+                          for index, row in self.sample_answers.iterrows()
+                          ]
 
         self.queries = query_list
         return self.queries
@@ -253,7 +245,6 @@ class Evaluator:
 
     def receive_gpt_responses(self):
         if self.gpt_responses is None:
-            self.read_sample_answers()
             queries = self.build_gpt_queries()
             self.gpt_responses, self.stats = self.gpt_manager.send_queries(
                 query_id=self.evaluator_id,
@@ -281,7 +272,7 @@ class Evaluator:
         - una columna con la calificación 
         - una columna con la descripción de la evaluación
         '''
-        df = self.read_sample_answers().copy()
+        df = self.sample_answers.copy()
         gpt_responses = self.receive_gpt_responses()
         gpt_text_messages = [ x.choices[0].message.content
                               for x in gpt_responses ]
