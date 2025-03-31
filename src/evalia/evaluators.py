@@ -104,7 +104,6 @@ class Evaluator:
         self.temperature = temperature
 
         # Reset execution state variables
-        self.queries = None
         self.gpt_responses = None
         self.stats = None
         self.result = None
@@ -219,16 +218,6 @@ class Evaluator:
             batches.append(batch_messages)
 
         return batches
-
-    def send_gpt_queries(self):
-        if self.task is None:
-            self.build_gpt_queries()
-            self.task = self.gpt_manager.start_task(
-                self.evaluator_id,
-                self.queries,
-                self.temperature)
-            self._persist_evaluator()
-        return self.task
 
     def receive_gpt_responses(self):
         if self.gpt_responses is None:
