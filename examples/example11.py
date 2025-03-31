@@ -7,14 +7,19 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evalia.evaluators import Evaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator
 
 # Para leer prompts desde ficheros de texto
 from evalia.prompts import PromptFromTextFile
 
 # Para configurar el modelo GPT que se va a usar
-MODELO_GPT = 'gpt-4'
+MODELO_GPT = 'gpt-4o-mini'
 #MODELO_GPT = 'gpt-3.5-turbo'
+
+# Directorio de salida
+OUTPUT_DIR = "./output"
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
 
 respuestas_estudiantes = {
     "respuesta": [

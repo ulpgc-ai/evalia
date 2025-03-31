@@ -47,15 +47,13 @@ from evalia.logs import get_logger
 from evalia.prompts import PromptSource
 from evalia.gpt_manager import GPTManager, GPTTask, gpt_factory
 from evalia.gpt_responses import GPTResponse, GPTResponseOneLine
+from evalia.config import cache_dir
 
 DEFAULT_TEMPERATURE = 0.0
 
 # Columnas que añade el evaluador automático al DataFrame de respuestas
 COLNAME_GPT_GRADES = "evaluación GPT"
 COLNAME_GPT_FULL_EVALUATIONS = "respuesta completa GPT"
-
-# Directorios para los resultados
-OUTPUT_DIR = os.path.join(os.path.expanduser("~"),"code/evalia/output")
 
 # Tiempo de espera para recibir respuesta de GPT (segundos)
 GPT_TIMEOUT = 0
@@ -268,7 +266,7 @@ class Evaluator(AbstractEvaluator):
 
     @classmethod
     def pickle_filename(cls, evaluator_id):
-        return os.path.join(OUTPUT_DIR, evaluator_id + ".pkl")
+        return os.path.join(cache_dir(), evaluator_id + ".pkl")
     
     @classmethod
     def load_from_file(cls, evaluator_id) -> AbstractEvaluator:
@@ -457,7 +455,7 @@ class Evaluator(AbstractEvaluator):
 
         def save_gpt_responses(gpt_responses):
             try:
-                filename = os.path.join(OUTPUT_DIR, self.evaluator_id + "_gpt_responses.json")
+                filename = os.path.join(cache_dir(), self.evaluator_id + "_gpt_responses.json")
                 dictlist = [ x.dict() for x in gpt_responses ]
                 with open(filename,"w") as f:
                     json.dump(dictlist,f,indent=2)
@@ -513,12 +511,16 @@ def extract_indicators(gpt_text_answer):
     return indicators
 
 
-def save_excel(df, ITEM, output_dir = OUTPUT_DIR):
+def save_excel(df, ITEM, output_dir = None):
     '''
     Guarda un DataFrame (resultado) en un Excel
-    con el mismo nombre que el ítem evaluado
+    con el mismo nombre que el ítem evaluado.
+    El directorio de salida por defecto es el CWD.
     '''
-    base_path = os.path.join(output_dir,ITEM)
+    if output_dir is None:
+        base_path = ITEM
+    else:
+        base_path = os.path.join(output_dir,ITEM)
     extension = ".xlsx"
     counter = 0
     while True:
