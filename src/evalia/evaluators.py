@@ -52,8 +52,8 @@ from evalia.config import cache_dir
 DEFAULT_TEMPERATURE = 0.0
 
 # Columnas que añade el evaluador automático al DataFrame de respuestas
-COLNAME_GPT_GRADES = "evaluación GPT"
-COLNAME_GPT_FULL_EVALUATIONS = "respuesta completa GPT"
+COLNAME_AI_GRADES = "evaluación IA"
+COLNAME_AI_FULL_EVALUATIONS = "respuesta completa IA"
 
 # Tiempo de espera para recibir respuesta de GPT (segundos)
 GPT_TIMEOUT = 0
@@ -475,8 +475,8 @@ class Evaluator(AbstractEvaluator):
         # añadir columnas al dataframe, vinculadas por el índice
         # NOTA: puede haber índices faltantes por errores en la respuesta de GPT
         # por eso hay que usar .loc e .index.map
-        df.loc[:,COLNAME_GPT_GRADES] = df.index.map(indexed_assessments)
-        df.loc[:,COLNAME_GPT_FULL_EVALUATIONS] = df.index.map(indexed_responses)
+        df.loc[:,COLNAME_AI_GRADES] = df.index.map(indexed_assessments)
+        df.loc[:,COLNAME_AI_FULL_EVALUATIONS] = df.index.map(indexed_responses)
 
         self.result = df
         logger.info(f'"{self.evaluator_id}" run successfully')
