@@ -30,6 +30,6 @@ evaluator = Evaluator(
 
 evaluator.temperature = 0.2
 
-df = evaluator.process_gpt_responses()
+df = evaluator.evaluate_answers()
 
 print(df)

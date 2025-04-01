@@ -238,7 +238,7 @@ class Evaluator:
         '''
         return text
 
-    def process_gpt_responses(self):
+    def evaluate_answers(self):
         '''
         Recupera la respuesta de GPT, la procesa y
         extrae las evaluaciones correspondientes a cada respuesta
@@ -290,7 +290,7 @@ class Evaluator:
         with open(gpt_responses_file,"r") as f:
             gpt_responses = json.load(f)
         self.gpt_responses = gpt_responses
-        df_result = self.process_gpt_responses()
+        df_result = self.evaluate_answers()
         return df_result
 
 
