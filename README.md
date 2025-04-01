@@ -30,8 +30,6 @@ Otros valores pueden ser "Tier 2", "Tier 3", "Tier 4" y "Tier 5".
 Pueden verse varios ejemplos en la carpeta [examples](examples). 
 A continuación se muestra el ejemplo inicial, [example01.py](examples/example01.py).
 
-Este ejemplo básico está en [example01.py](examples/example01.py).
-
 ```python
 import pandas as pd
 
@@ -168,7 +166,7 @@ para evitar superar los límites de tokens por minuto y de peticiones por minuto
 
 ## Arquitectura del software
 
-En el documento [class_architecture.md](class_architecture.md) se describe el diseño de clases Python de esta biblioteca.
+En el documento [class_architecture.md](class_architecture.md) se describe el diseño de clases Python de esta biblioteca _(documento pendiente de revisión)_.
 
 
 ## Ficheros que genera la ejecución de EVALIA
