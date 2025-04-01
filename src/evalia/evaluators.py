@@ -37,14 +37,12 @@ from logs import get_logger
 from prompts import PromptSource
 from .model_manager.gpt_manager import gpt_factory
 from gpt_responses import GPTResponse, GPTResponseOneLine
+from config import cache_dir
 from model_manager import ModelManager
 
 # Columnas que añade el evaluador automático al DataFrame de respuestas
-COLNAME_GPT_GRADES = "evaluación GPT"
-COLNAME_GPT_FULL_EVALUATIONS = "respuesta completa GPT"
-
-# Directorios para los resultados
-OUTPUT_DIR = os.path.join(os.path.expanduser("~"),"code/evalia/output")
+COLNAME_AI_GRADES = "evaluación IA"
+COLNAME_AI_FULL_EVALUATIONS = "respuesta completa IA"
 
 # Logging
 logger = get_logger(__name__)
@@ -118,7 +116,7 @@ class Evaluator:
     # The object was serialized after executing send_gpt_queries()
     @classmethod
     def pickle_filename(cls, evaluator_id):
-        return os.path.join(OUTPUT_DIR, evaluator_id + ".pkl")
+        return os.path.join(cache_dir(), evaluator_id + ".pkl")
 
     # TODO fix this method. It's strange to have a class method that returns an instance of the same class
     @classmethod
@@ -255,7 +253,7 @@ class Evaluator:
 
         def save_gpt_responses(gpt_responses):
             try:
-                filename = os.path.join(OUTPUT_DIR, self.evaluator_id + "_gpt_responses.json")
+                filename = os.path.join(cache_dir(), self.evaluator_id + "_gpt_responses.json")
                 dictlist = [ x.dict() for x in gpt_responses ]
                 with open(filename,"w") as f:
                     json.dump(dictlist,f,indent=2)
@@ -275,8 +273,8 @@ class Evaluator:
         # añadir columnas al dataframe, vinculadas por el índice
         # NOTA: puede haber índices faltantes por errores en la respuesta de GPT
         # por eso hay que usar .loc e .index.map
-        df.loc[:,COLNAME_GPT_GRADES] = df.index.map(indexed_assessments)
-        df.loc[:,COLNAME_GPT_FULL_EVALUATIONS] = df.index.map(indexed_responses)
+        df.loc[:,COLNAME_AI_GRADES] = df.index.map(indexed_assessments)
+        df.loc[:,COLNAME_AI_FULL_EVALUATIONS] = df.index.map(indexed_responses)
 
         self.result = df
         logger.info(f'"{self.evaluator_id}" run successfully')
@@ -311,12 +309,16 @@ def extract_indicators(gpt_text_answer):
     return indicators
 
 
-def save_excel(df, ITEM, output_dir = OUTPUT_DIR):
+def save_excel(df, ITEM, output_dir = None):
     '''
     Guarda un DataFrame (resultado) en un Excel
-    con el mismo nombre que el ítem evaluado
+    con el mismo nombre que el ítem evaluado.
+    El directorio de salida por defecto es el CWD.
     '''
-    base_path = os.path.join(output_dir,ITEM)
+    if output_dir is None:
+        base_path = ITEM
+    else:
+        base_path = os.path.join(output_dir,ITEM)
     extension = ".xlsx"
     counter = 0
     while True:

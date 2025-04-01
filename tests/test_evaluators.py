@@ -81,8 +81,8 @@ class TestEvaluator(unittest.TestCase):
         columnas_resultado = df_result.columns
         self.assertTrue("respuesta" in columnas_resultado)
         self.assertTrue("calificación real" in columnas_resultado)
-        self.assertTrue("evaluación GPT" in columnas_resultado)
-        self.assertTrue("respuesta completa GPT" in columnas_resultado)
+        self.assertTrue("evaluación IA" in columnas_resultado)
+        self.assertTrue("respuesta completa IA" in columnas_resultado)
 
     def test_openai(self):
         evaluator = self.new_evaluator()
@@ -94,8 +94,8 @@ class TestEvaluator(unittest.TestCase):
         columnas_resultado = df_result.columns
         self.assertTrue("respuesta" in columnas_resultado)
         self.assertTrue("calificación real" in columnas_resultado)
-        self.assertTrue("evaluación GPT" in columnas_resultado)
-        self.assertTrue("respuesta completa GPT" in columnas_resultado)
+        self.assertTrue("evaluación IA" in columnas_resultado)
+        self.assertTrue("respuesta completa IA" in columnas_resultado)
 
 
 if __name__ == '__main__':

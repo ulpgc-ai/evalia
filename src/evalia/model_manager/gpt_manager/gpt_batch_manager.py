@@ -66,13 +66,14 @@ class GPTBatchManager(GPTManager):
             )
 
         # Upload the file to OpenAI file storage
-        batch_input_file = self.client.files.create(
-            file=open(batch_jsonl_file, 'rb'),
-            purpose="batch"
-        )
+        with open(batch_jsonl_file, 'rb') as f:
+            batch_input_file = self.client.files.create(
+                file=f,
+                purpose="batch"
+            )
 
         # Remove the JSONL file
-        # os.remove(batch_jsonl_file)
+        os.remove(batch_jsonl_file)
 
         # Create the batch in OpenAI
         batch = self.client.batches.create(

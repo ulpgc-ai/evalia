@@ -6,13 +6,18 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evalia.evaluators import Evaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompts import PromptFromString
 
 # Para configurar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4o-mini'
+
+# Directorio de salida
+OUTPUT_DIR = "./output"
+if not os.path.exists(OUTPUT_DIR):
+    os.makedirs(OUTPUT_DIR)
 
 PROMPT = '''
 Eres un evaluador de geografía y te han pedido que evalúes si los estudiantes 

@@ -8,10 +8,10 @@ Módulo Python para asistir en evaluación por IA, apoyada en la API de OpenAI (
 ## Configuración
 
 ### Instalación
-El módulo está preparado para instalarse con PIP.
 
-Se requiere tener instalados estos módulos (pip los instala automáticamente):
-pandas, openpyxl, openai, tiktoken
+El módulo está preparado para instalarse con PIP. 
+
+El archivo [pyproject.toml](pyproject.toml) indica las dependencias de este módulo.
 
 ### Variables de entorno
 
@@ -21,19 +21,20 @@ Se usará para controlar los límites RPM y TPM de la interacción con GPT.
 Si la variable no está definida, se usará "Tier 1".
 Otros valores pueden ser "Tier 2", "Tier 3", "Tier 4" y "Tier 5".
 
+* `EVALIA_CACHE_DIR` Ruta de los archivos temporales de la aplicación (archivos _pickle_). Si se omite, se usa la ruta por defecto para los archivos de caché de "evalia".
+* `EVALIA_LOG_DIR` Ruta de los archivos de registro (_logs_) de la aplicación. Si se omite, se usa la ruta por defecto del sistema operativo para los _logs_ de "evalia".
+* `EVALIA_RUN_HIGH_COST_TESTS` (para el desarrollador). Si vale 1, habilita la ejecución de unidades de test de alto coste potencial (que consumen mucho tiempo o que interactúan mucho con el motor de IA).
 
 ## Ejemplo básico
 
 Pueden verse varios ejemplos en la carpeta [examples](examples). 
 A continuación se muestra el ejemplo inicial, [example01.py](examples/example01.py).
 
-Este ejemplo básico está en [example01.py](examples/example01.py).
-
 ```python
 import pandas as pd
 
 # Clase para evaluador automático
-from evalia.evaluators import Evaluator, OUTPUT_DIR
+from evalia.evaluators import Evaluator
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompts import PromptFromString
@@ -92,9 +93,6 @@ print(df_result)
 
 # Imprime estadísticas: tokens y tiempo consumido
 print(evaluador.get_stats())
-
-# Guarda el resultado en un Excel
-df_result.to_excel(OUTPUT_DIR + "/example01.xlsx")
 ```
 
 ## Comentarios al ejemplo
@@ -168,13 +166,18 @@ para evitar superar los límites de tokens por minuto y de peticiones por minuto
 
 ## Arquitectura del software
 
-En el documento [class_architecture.md](class_architecture.md) se describe el diseño de clases Python de esta biblioteca.
+En el documento [class_architecture.md](class_architecture.md) se describe el diseño de clases Python de esta biblioteca _(documento pendiente de revisión)_.
 
 
-## Ficheros y resultados que genera la ejecución
+## Ficheros que genera la ejecución de EVALIA
 
 Cuando se ejecuta Evalia o un programa de prueba, esta biblioteca puede generar estos ficheros:
 
-- __Carpeta 'output'.__ En esta carpeta se pueden generar todo tipo de ficheros de resultados: hojas Excel con resultados de la evaluación,  ficheros JSON con el volcado de las respuestas de GPT (para depuración), estadísticas de uso, etc.
-- __app.log__ Archivo de registro (_log_) de actividad de la aplicación.
+- __Ficheros pickle__ Se usan para persistir los objetos cuando se ejecutan tareas 
+en modo lote (_batch_). Se almacenan en el directorio definido en la variable de entorno
+__EVALIA_CACHE_DIR__ o, en su defecto, en la ruta de cachés de la aplicación "evalia", 
+según el estándar de la máquina donde se ejecuta el módulo.
+- __app.log__ Archivo de registro (_log_) de actividad de la aplicación. 
+Se guarda en el directorio definido en la variable de entorno __EVALIA_LOG_DIR__ o, en su defecto, en la ruta de _logs_ de la aplicación "evalia", según el estándar
+de la máquina en la que se ejecuta el módulo (ej. C:\App Data\evalia\logs).
 

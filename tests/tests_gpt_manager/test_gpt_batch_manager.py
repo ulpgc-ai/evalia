@@ -1,21 +1,105 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, mock_open
 
 from evalia.gpt_manager.gpt_batch_manager import GPTBatchManager
+from .utils import high_cost
+
 import time
 import random
-from unittest.mock import patch, mock_open
 import ast
+import os
 
 QUERIES_FILE = "query-4ESO-17-deunaenuna.txt"
 
-# Me sitúo en la misma carpeta que el script
-# para poder leer los ficheros de prueba
-import os
-directorio_del_script = os.path.dirname(os.path.abspath(__file__))
-os.chdir(directorio_del_script)
+class TestGPTBatchManager(unittest.TestCase):
 
-class GPTExcepcionError(Exception):
+    @classmethod
+    def setUpClass(cls):
+        # Me sitúo en la misma carpeta que el script
+        # para poder leer los ficheros de datos
+        directorio_del_script = os.path.dirname(os.path.abspath(__file__))
+        os.chdir(directorio_del_script)
+
+    @patch("os.path.getsize", return_value=1000)
+    @patch("builtins.open", new_callable=mock_open)
+    def test_build_jsonl_file(self, mock_file, mock_getsize):
+        gpt_manager = GPTBatchManager(model="gpt-4o-mini")
+        query_id = "test_build_jsonl_file"
+        query_list = [
+            [{"role": "user", "content": "Hola"}],
+            [{"role": "user", "content": "How do you do?"}],
+        ]
+        temperature = 0.7
+
+        expected_jsonl_content = (
+            '{ "custom_id": "1", "method": "POST", '
+            '"url": "/v1/chat/completions", '
+            '"body": '
+            '{ "model": "gpt-4o-mini", "temperature": 0.7, '
+            '"messages": [{"role": "user", "content": "Hola"}] } }\n'
+            '{ "custom_id": "2", "method": "POST", '
+            '"url": "/v1/chat/completions", '
+            '"body": '
+            '{ "model": "gpt-4o-mini", "temperature": 0.7, '
+            '"messages": [{"role": "user", "content": "How do you do?"}] } }\n'
+        )
+
+        # Mocked file writing and checking file size
+        jsonl_filename = gpt_manager._build_jsonl_file(query_id, query_list, temperature)
+
+
+        mock_file.assert_called_once_with(f"{query_id}.jsonl", "w")
+        mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[0])
+        mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[1])
+        self.assertEqual(jsonl_filename, f"{query_id}.jsonl")
+
+
+    def test_start_task(self):
+        gpt_manager = GPTBatchManager(model="gpt-4o-mini")
+        query_id = "test_start_task"
+        query_list = [
+            [{"role": "user", "content": "Hola"}],
+            [{"role": "user", "content": "How do you do?"}],
+        ]
+        temperature = 0.7
+
+        task: GPTBatchManager.GPTBatchTask = gpt_manager.start_task(
+            query_id, query_list, temperature
+            )
+
+        self.assertIsInstance(task, GPTBatchManager.GPTBatchTask)
+        self.assertIsInstance(task.batch_id, str)
+        #self.assertEqual(task.batch_id.endpoint, "/v1/chat/completions")
+        #self.assertEqual(task.batch_id.completion_window, "24h")
+        #self.assertEqual(task.batch_id.metadata, {"description": query_id})
+
+        # tear down
+        gpt_manager.cancel_task(task)
+    
+    @high_cost
+    def test_start_task_complex(self):
+        with open(QUERIES_FILE,'r',encoding='iso-8859-1') as query_file:
+            queries = query_file.read()
+            queries = ast.literal_eval(queries)
+        gpt_manager = GPTBatchManager(model="gpt-4o-mini")
+        query_id = "test_start_task_complex"
+
+        task = gpt_manager.start_task(query_id, queries, temperature=0.7)
+
+    @high_cost
+    def test_get_response(self):
+        with open(QUERIES_FILE,'r',encoding='iso-8859-1') as query_file:
+            queries = query_file.read()
+            queries = ast.literal_eval(queries)
+        gpt_manager = GPTBatchManager(model="gpt-4o-mini")
+
+        query_id = "test_query_20"
+        task = gpt_manager.start_task(query_id, queries, temperature=0.7)
+        response = gpt_manager.get_response(task)
+        print(response)
+
+
+class GPTExceptionError(Exception):
     pass
 
 def mock_chat_completion_create(model, messages):
@@ -45,82 +129,9 @@ def mock_chat_completion_create(model, messages):
             }
     }
     if random.random() < 0.5:
-        raise GPTExcepcionError("Ha habido una excepción desde la API de GPT")
+        raise GPTExceptionError("Ha habido una excepción desde la API de GPT")
     return json
         
-class TestGPTBatchManager(unittest.TestCase):
-
-    @patch("builtins.open", new_callable=mock_open)
-    def test_build_jsonl_file(self, mock_file):
-        gpt_manager = GPTBatchManager(model="gpt-4o-mini")
-        query_id = "test_query"
-        query_list = [
-            [{"role": "user", "content": "Hola"}],
-            [{"role": "user", "content": "How do you do?"}],
-        ]
-        temperature = 0.7
-
-        expected_jsonl_content = (
-            '{ "custom_id": "1", "method": "POST", '
-            '"url": "/v1/chat/completions", '
-            '"body": '
-            '{ "model": "gpt-4o-mini", "temperature": 0.7, '
-            '"messages": [{"role": "user", "content": "Hola"}] } }\n'
-            '{ "custom_id": "2", "method": "POST", '
-            '"url": "/v1/chat/completions", '
-            '"body": '
-            '{ "model": "gpt-4o-mini", "temperature": 0.7, '
-            '"messages": [{"role": "user", "content": "How do you do?"}] } }\n'
-        )
-
-        jsonl_filename = gpt_manager._build_jsonl_file(query_id, query_list, temperature)
-
-        mock_file.assert_called_once_with(f"{query_id}.jsonl", "w")
-        mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[0])
-        mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[1])
-        self.assertEqual(jsonl_filename, f"{query_id}.jsonl")
-
-    def test_start_task(self):
-        gpt_manager = GPTBatchManager(model="gpt-4o-mini")
-        query_id = "test_query"
-        query_list = [
-            [{"role": "user", "content": "Hola"}],
-            [{"role": "user", "content": "How do you do?"}],
-        ]
-        temperature = 0.7
-
-        task: GPTBatchManager.GPTBatchTask = gpt_manager.start_task(
-            query_id, query_list, temperature
-            )
-
-        self.assertIsInstance(task, GPTBatchManager.GPTBatchTask)
-        self.assertIsInstance(task.batch_id, str)
-        #self.assertEqual(task.batch_id.endpoint, "/v1/chat/completions")
-        #self.assertEqual(task.batch_id.completion_window, "24h")
-        #self.assertEqual(task.batch_id.metadata, {"description": query_id})
-
-        # tear down
-        gpt_manager.cancel_task(task)
-    
-    def test_start_task_complex(self):
-        with open(QUERIES_FILE,'r',encoding='iso-8859-1') as query_file:
-            queries = query_file.read()
-            queries = ast.literal_eval(queries)
-        gpt_manager = GPTBatchManager(model="gpt-4o-mini")
-        query_id = "test_query"
-
-        task = gpt_manager.start_task(query_id, queries, temperature=0.7)
-
-    def test_get_response(self):
-        with open(QUERIES_FILE,'r',encoding='iso-8859-1') as query_file:
-            queries = query_file.read()
-            queries = ast.literal_eval(queries)
-        gpt_manager = GPTBatchManager(model="gpt-4o-mini")
-
-        query_id = "test_query_20"
-        task = gpt_manager.start_task(query_id, queries, temperature=0.7)
-        response = gpt_manager.get_response(task)
-        print(response)
 
 @unittest.skip("Skip this class for now")
 class TestGPTManager(unittest.TestCase):
