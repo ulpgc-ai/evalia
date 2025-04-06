@@ -1,5 +1,5 @@
 '''
-class GPTResponse: abstracción de la respuesta de la API de OpenAI
+class GPTResponse: abstracción de la respuesta de una API de un modelo de lenguaje
 '''
 
 from abc import ABC, abstractmethod
@@ -7,7 +7,7 @@ from typing import List
 import re
 import json
 
-class GPTResponse(ABC):
+class APIResponse(ABC):
 
     @abstractmethod
     def get_full_response(self) -> str:
@@ -25,7 +25,7 @@ class GPTResponse(ABC):
         pass
 
     @classmethod
-    def extract_responses(cls,gpt_messages_list) -> List['GPTResponse']:
+    def extract_responses(cls,gpt_messages_list) -> List['APIResponse']:
         '''get a list of OpenAI response messages and transform them
         into a list of GPTResponse objects.
         Every input message should come from an API response, in the
@@ -33,7 +33,7 @@ class GPTResponse(ABC):
         '''
         pass
 
-class GPTResponseOneLine(GPTResponse):
+class APIResponseOneLine(APIResponse):
     '''
     Single line responses that are easy to handle.
     Example: "17. 2.5"
@@ -57,15 +57,15 @@ class GPTResponseOneLine(GPTResponse):
     def get_assessment(self):
         return self.response
 
-    def extract_responses(cls,gpt_messages_list) -> List[GPTResponse]:
+    def extract_responses(cls,gpt_messages_list) -> List[APIResponse]:
         '''flatten the messages into a list of lines'''
-        gpt_responses = [ GPTResponseOneLine(line)
-         for text in gpt_messages_list 
-           for line in text.splitlines() 
-           ]
+        gpt_responses = [APIResponseOneLine(line)
+                         for text in gpt_messages_list
+                         for line in text.splitlines()
+                         ]
         return gpt_responses	
     
-class GPTResponseJSON(GPTResponse):
+class APIResponseJSON(APIResponse):
     '''
     Each response is a JSON list: [ index, score, comment... ]
     Lists are separated by a separator string
@@ -97,16 +97,16 @@ class GPTResponseJSON(GPTResponse):
         except:
             return None
             
-    def extract_responses(cls,gpt_messages_list) -> List[GPTResponse]:
+    def extract_responses(cls,gpt_messages_list) -> List[APIResponse]:
         '''JSON responses are separated by a separator string'''
-        gpt_responses = [ GPTResponseJSON(block)
-         for text in gpt_messages_list 
-           for block in text.split(cls.separator)
-           ]
+        gpt_responses = [APIResponseJSON(block)
+                         for text in gpt_messages_list
+                         for block in text.split(cls.separator)
+                         ]
         return gpt_responses
 
     
-class GPTResponseMultiLine(GPTResponse):
+class APIResponseMultiLine(APIResponse):
 
     separator = '#RESP#'
 
@@ -149,12 +149,12 @@ class GPTResponseMultiLine(GPTResponse):
             except:
                 return None
             
-    def extract_responses(cls,gpt_messages_list) -> List[GPTResponse]:
+    def extract_responses(cls,gpt_messages_list) -> List[APIResponse]:
         '''multi-line responses are separated by a blank line'''
-        gpt_responses = [ GPTResponseMultiLine(block)
-         for text in gpt_messages_list 
-           for block in text.split(cls.separator)
-           ]
+        gpt_responses = [APIResponseMultiLine(block)
+                         for text in gpt_messages_list
+                         for block in text.split(cls.separator)
+                         ]
         return gpt_responses
 
 # quick test
@@ -167,12 +167,12 @@ if __name__ == '__main__':
     "This is the last line\n"
     )
     print(raw_response)
-    gpt_response = GPTResponseOneLine(raw_response)
+    gpt_response = APIResponseOneLine(raw_response)
     print(f"id: {gpt_response.get_index()}")
     print(f"assessment: {gpt_response.get_assessment()}")
     print(f"response: {gpt_response.get_full_response()}")
     print('-'*20)
-    gpt_response = GPTResponseMultiLine(raw_response)
+    gpt_response = APIResponseMultiLine(raw_response)
     print(f"id: {gpt_response.get_index()}")
     print(f"assessment: {gpt_response.get_assessment()}")
     print(f"response: {gpt_response.get_full_response()}")

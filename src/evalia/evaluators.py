@@ -8,8 +8,7 @@ para tratar las respuestas antes y después de ser procesados por GPT:
 - build_prompt_preamble(): produce un JSON con la conversación inicial que se
   repite en todas las interacciones con GPT.
 - build_gpt_queries(): convierte la muestra en una colección de textos para el GPT.
-- receive_gpt_responses(): recibe las respuestas de GPT en el JSON de OpenAI.
-- process_gpt_responses(): transforma las respuestas de GPT en un DataFrame listo para explotar.
+- evaluate_answers(): transforma las respuestas de cada LLM en un DataFrame listo para explotar.
 - get_stats(): devuelve estadísticas de la interacción con GPT.
 
 Estos métodos se orquestan en el siguiente método plantilla:
@@ -35,14 +34,15 @@ import pickle
 
 from logs import get_logger
 from prompts import PromptSource
+from .model_manager import ModelResponse
 from .model_manager.gpt_manager import gpt_factory
-from gpt_responses import GPTResponse, GPTResponseOneLine
+from api_response import APIResponse, APIResponseOneLine
 from config import cache_dir
 from model_manager import ModelManager
 
 # Columnas que añade el evaluador automático al DataFrame de respuestas
-COLNAME_AI_GRADES = "evaluación IA"
-COLNAME_AI_FULL_EVALUATIONS = "respuesta completa IA"
+COLNAME_AI_GRADES = "evaluación "
+COLNAME_AI_FULL_EVALUATIONS = "respuesta completa "
 
 # Logging
 logger = get_logger(__name__)
@@ -56,7 +56,7 @@ class Evaluator:
                   prompt: PromptSource = None,
                   sample_selector = None,
                   query_batch_length=20,
-                  gpt_response_class: Type[GPTResponse] = GPTResponseOneLine,
+                  gpt_response_class: Type[APIResponse] = APIResponseOneLine,
                   temperature: float = 0.0
                   ):
         '''
@@ -187,17 +187,14 @@ class Evaluator:
         json_list = f'[ {index}, {json_student_answer} ]'
         return json_list
 
-    def build_gpt_queries(self):
-        if self.queries is not None:
-            return self.queries
+    def build_llm_queries(self):
         if isinstance(self.responses_column, int):
             responses = self.sample_answers.iloc[:, self.responses_column]
         elif isinstance(self.responses_column, str):
             responses = self.sample_answers[self.responses_column]
         else:
             raise TypeError("Tipo de columna de respuestas no soportado.")
-        self.queries = [self.build_prompt_preamble() + batch for batch in self.partition_batches(responses)]
-        return self.queries
+        return [self.build_prompt_preamble() + batch for batch in self.partition_batches(responses)]
 
     def partition_batches(self, responses):
         """ Divides the responses into batches according to `self.query_batch_length` """
@@ -217,16 +214,6 @@ class Evaluator:
 
         return batches
 
-    def receive_gpt_responses(self):
-        if self.gpt_responses is None:
-            queries = self.build_gpt_queries()
-            self.gpt_responses, self.stats = self.gpt_manager.send_queries(
-                query_id=self.evaluator_id,
-                query_list=queries,
-                temperature=self.temperature
-            )
-        return self.gpt_responses
-
     def get_stats(self):
         return self.stats
 
@@ -236,45 +223,44 @@ class Evaluator:
         '''
         return text
 
+    def save_llm_responses(self, llm_responses: List[ModelResponse], llm_name: str):
+        try:
+            filename = os.path.join(cache_dir(), self.evaluator_id + f"_${llm_name}_responses.json")
+            dictlist = [x.dict() for x in llm_responses]
+            with open(filename,"w") as f:
+                json.dump(dictlist,f,indent=2)
+        except:
+            pass
+
     def evaluate_answers(self):
         '''
-        Recupera la respuesta de GPT, la procesa y
+        Recupera la respuesta del LLM, la procesa y
         extrae las evaluaciones correspondientes a cada respuesta
         de la muestra evaluada.
         Devuelve un DataFrame que es el mismo de la muestra,
-        añadiendo dos columnas al final: 
-        - una columna con la calificación 
+        añadiendo dos columnas al final:
+        - una columna con la calificación
         - una columna con la descripción de la evaluación
         '''
         df = self.sample_answers.copy()
-        gpt_responses = self.receive_gpt_responses()
-        gpt_text_messages = [ x.choices[0].message.content
-                              for x in gpt_responses ]
+        for manager in self.managers:
+            llm_responses = manager.generate_text(prompts = self.build_llm_queries(), system_context = self.build_prompt_preamble(), temperature = self.temperature)
+            self.save_llm_responses(llm_responses, manager.get_llm_name())
+            text_messages = [x.response for x in llm_responses]
 
-        def save_gpt_responses(gpt_responses):
-            try:
-                filename = os.path.join(cache_dir(), self.evaluator_id + "_gpt_responses.json")
-                dictlist = [ x.dict() for x in gpt_responses ]
-                with open(filename,"w") as f:
-                    json.dump(dictlist,f,indent=2)
-            except:
-                pass
+            # me obliga a usar la clase dos veces: como objeto y también como argumento
+            extractor = self.gpt_response_class
+            gpt_responses = extractor.extract_responses(extractor,text_messages)
 
-        save_gpt_responses(gpt_responses)
-
-        # me obliga a usar la clase dos veces: como objeto y también como argumento
-        extractor = self.gpt_response_class
-        gpt_responses = extractor.extract_responses(extractor,gpt_text_messages)
-
-        # a partir de gpt_lines, obtener listas indexadas de respuestas y evaluaciones
-        get_score = lambda x: self.postprocess_one_gpt_response(x.get_assessment())
-        indexed_assessments = { x.get_index():get_score(x) for x in gpt_responses }
-        indexed_responses = { x.get_index():x.get_full_response() for x in gpt_responses }
-        # añadir columnas al dataframe, vinculadas por el índice
-        # NOTA: puede haber índices faltantes por errores en la respuesta de GPT
-        # por eso hay que usar .loc e .index.map
-        df.loc[:,COLNAME_AI_GRADES] = df.index.map(indexed_assessments)
-        df.loc[:,COLNAME_AI_FULL_EVALUATIONS] = df.index.map(indexed_responses)
+            # a partir de gpt_lines, obtener listas indexadas de respuestas y evaluaciones
+            get_score = lambda x: self.postprocess_one_gpt_response(x.get_assessment())
+            indexed_assessments = { x.get_index():get_score(x) for x in gpt_responses }
+            indexed_responses = { x.get_index():x.get_full_response() for x in gpt_responses }
+            # añadir columnas al dataframe, vinculadas por el índice
+            # NOTA: puede haber índices faltantes por errores en la respuesta de GPT
+            # por eso hay que usar .loc e .index.map
+            df.loc[:,COLNAME_AI_GRADES + manager.get_llm_name()] = df.index.map(indexed_assessments)
+            df.loc[:,COLNAME_AI_FULL_EVALUATIONS + manager.get_llm_name()] = df.index.map(indexed_responses)
 
         self.result = df
         logger.info(f'"{self.evaluator_id}" run successfully')

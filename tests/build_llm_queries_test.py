@@ -6,8 +6,8 @@
 import sys
 sys.path.append('.')
 import pandas as pd
-from evaluators import Evaluator
-from prompts import PromptFromTextFile
+from src.evalia import Evaluator
+from src.evalia.prompts import PromptFromTextFile
 
 MODEL = "gpt-4"
 #MODEL = "gpt-3.5-turbo"
@@ -30,6 +30,6 @@ test_item = Evaluator(
 test_item.model = MODEL
 test_item.temperature = 0.2
 
-queries = test_item.build_gpt_queries()
+queries = test_item.build_llm_queries()
 
 print(queries)
