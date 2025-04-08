@@ -3,8 +3,8 @@ Versión mock de GPTManager.
 Procesa los mensajes sin dialogar realmente con GPT.
 """
 
-from src.evalia.logs import get_logger
-from src.evalia.model_manager import ModelManager, ModelResponse
+from evalia.logs import get_logger
+from evalia.model_manager import ModelManager, ModelResponse
 
 logger = get_logger(__name__)
 

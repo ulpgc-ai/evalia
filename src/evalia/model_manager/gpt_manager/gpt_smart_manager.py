@@ -5,7 +5,7 @@ Implementation of a GPT Manager class to handle the OpenAI API restrictions.
 """
 
 from collections import deque, namedtuple
-from typing import Tuple, List, Union, Literal
+from typing import List, Union, Literal
 
 from openai.types.chat import ChatCompletionDeveloperMessageParam, ChatCompletionSystemMessageParam, \
     ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, \

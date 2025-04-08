@@ -1,6 +1,6 @@
 import logging
 import os
-from . import config
+from evalia import config
 
 LOG_LEVEL = logging.DEBUG
 LOG_FILENAME = 'app.log'

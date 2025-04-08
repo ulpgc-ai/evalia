@@ -14,11 +14,11 @@ Métodos:
 from typing import Tuple
 from openai import OpenAI
 from openai.types.chat.chat_completion import ChatCompletion
-from . import GPTManager, GPTTask
+from evalia.model_manager import GPTManager, GPTTask
 import os
 import json
 import time
-from src.evalia.logs import get_logger
+from evalia.logs import get_logger
 
 # OpenAI limits
 MAX_REQUESTS_PER_BATCH = 50_000

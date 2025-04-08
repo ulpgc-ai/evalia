@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from src.evalia.model_manager import ModelResponse
+from evalia.model_manager import ModelResponse
 
 
 class ModelManager(ABC):

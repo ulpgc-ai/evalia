@@ -32,13 +32,11 @@ import re
 import json
 import pickle
 
-from logs import get_logger
-from prompts import PromptSource
-from .model_manager import ModelResponse
-from .model_manager.gpt_manager import gpt_factory
-from api_response import APIResponse, APIResponseOneLine
-from config import cache_dir
-from model_manager import ModelManager
+from evalia.logs import get_logger
+from evalia.prompts import PromptSource
+from evalia.model_manager import ModelManager, ModelResponse
+from evalia.api_response import APIResponse, APIResponseOneLine
+from evalia.config import cache_dir
 
 # Columnas que añade el evaluador automático al DataFrame de respuestas
 COLNAME_AI_GRADES = "evaluación "
@@ -110,6 +108,7 @@ class Evaluator:
 
     def add_manager(self, manager: ModelManager):
         self.managers.append(manager)
+        return self
 
     # Load a serialized evaluator from a pickle file
     # so you can continue the evaluation process.
@@ -250,7 +249,7 @@ class Evaluator:
 
             # me obliga a usar la clase dos veces: como objeto y también como argumento
             extractor = self.gpt_response_class
-            gpt_responses = extractor.extract_responses(extractor,text_messages)
+            gpt_responses = extractor.extract_responses(text_messages)
 
             # a partir de gpt_lines, obtener listas indexadas de respuestas y evaluaciones
             get_score = lambda x: self.postprocess_one_gpt_response(x.get_assessment())

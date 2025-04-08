@@ -1,6 +1,6 @@
 from abc import ABC
 
-from src.evalia.model_manager import ModelManager
+from evalia.model_manager import ModelManager
 
 
 class GPTManager(ABC, ModelManager):
