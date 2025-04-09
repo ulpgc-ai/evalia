@@ -117,9 +117,8 @@ class Evaluator:
     def pickle_filename(cls, evaluator_id):
         return os.path.join(cache_dir(), evaluator_id + ".pkl")
 
-    # TODO fix this method. It's strange to have a class method that returns an instance of the same class
     @classmethod
-    def load_from_file(cls, evaluator_id) -> Evaluator:
+    def load_from_file(cls, evaluator_id):
         '''Load a serialized evaluator from a pickle file'''
         filename = cls.pickle_filename(evaluator_id)
         # if filename exists, load the evaluator from the pickle
