@@ -14,7 +14,7 @@ Métodos:
 from typing import Tuple
 from openai import OpenAI
 from openai.types.chat.chat_completion import ChatCompletion
-from evalia.model_manager import GPTManager, GPTTask
+from evalia.llm import GPTManager, GPTTask
 import os
 import json
 import time

@@ -21,7 +21,7 @@ import datetime
 import os
 from dataclasses import dataclass
 
-from src.evalia.model_manager import LanguageModelManager, LanguageModelResponse
+from src.evalia.llm import LanguageModelManager, LanguageModelResponse
 
 ONE_MINUTE = 60  # One minute in seconds
 

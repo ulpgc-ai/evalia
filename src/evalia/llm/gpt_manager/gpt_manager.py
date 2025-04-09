@@ -1,6 +1,6 @@
 from abc import ABC
 
-from evalia.model_manager import LanguageModelManager
+from evalia.llm import LanguageModelManager
 
 
 class GPTManager(ABC, LanguageModelManager):

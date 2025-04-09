@@ -4,7 +4,7 @@ Procesa los mensajes sin dialogar realmente con GPT.
 """
 
 from evalia.logs import get_logger
-from evalia.model_manager import LanguageModelManager, LanguageModelResponse
+from evalia.llm import LanguageModelManager, LanguageModelResponse
 
 logger = get_logger(__name__)
 

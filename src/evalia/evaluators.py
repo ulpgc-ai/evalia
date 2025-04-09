@@ -34,7 +34,7 @@ import pickle
 
 from evalia.logs import get_logger
 from evalia.prompts import PromptSource
-from evalia.model_manager import LanguageModelManager, LanguageModelResponse
+from evalia.llm import LanguageModelManager, LanguageModelResponse
 from evalia.api_response import APIResponse, APIResponseOneLine
 from evalia.config import cache_dir
 

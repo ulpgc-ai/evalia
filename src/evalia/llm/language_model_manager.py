@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from evalia.model_manager import LanguageModelResponse
+from evalia.llm import LanguageModelResponse
 
 
 class LanguageModelManager(ABC):
