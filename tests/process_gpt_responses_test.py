@@ -3,7 +3,7 @@ sys.path.append('.')
 import pandas as pd
 from evaluators import Evaluator
 from prompts import PromptFromTextFile
-#from gpt_manager import GPTMockManager as GPTManager
+#from gpt import GPTMockManager as GPTManager
 from gpt_manager import GPTSmartManager as GPTManager
 
 #MODEL = "gpt-4"

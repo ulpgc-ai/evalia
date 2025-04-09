@@ -157,7 +157,7 @@ de respuesta.
 ## Código fuente: Ficheros principales
 
 - __[evaluators.py](src/evalia/evaluators.py)__. Clases para implementar la evaluación de los ítems. Todas las evaluaciones implementan la interfaz de la clase abstracta `AbstractEvaluator`. La clase base concreta `Evaluator` contiene una implementación totalmente funcional de todas las operaciones.
-- __[gpt_manager/gpt_manager.py](src/evalia/llm/gpt_manager/gpt_manager.py)__. Clase abstracta `GPTManager`. 
+- __[gpt_manager/gpt_manager.py](src/evalia/llm/gpt/gpt_manager.py)__. Clase abstracta `GPTManager`. 
 Una interfaz sencilla con la API de OpenAI, adaptada a nuestro sistema. 
 Implementa contención automática del tráfico con OpenAI,
 para evitar superar los límites de tokens por minuto y de peticiones por minuto.
