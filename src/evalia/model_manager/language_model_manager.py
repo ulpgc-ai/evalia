@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from evalia.model_manager import ModelResponse
+from evalia.model_manager import LanguageModelResponse
 
 
-class ModelManager(ABC):
+class LanguageModelManager(ABC):
     """Interface to interact with different language models."""
 
     def __init__(self, model: str, api_key: str):
@@ -15,7 +15,7 @@ class ModelManager(ABC):
         self.model = model
 
     @abstractmethod
-    def generate_text(self, prompts: List[str], system_context: str = "", temperature: float = 0.0) -> List[ModelResponse]:
+    def generate_text(self, prompts: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
         pass
 
     @abstractmethod

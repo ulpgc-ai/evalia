@@ -34,7 +34,7 @@ import pickle
 
 from evalia.logs import get_logger
 from evalia.prompts import PromptSource
-from evalia.model_manager import ModelManager, ModelResponse
+from evalia.model_manager import LanguageModelManager, LanguageModelResponse
 from evalia.api_response import APIResponse, APIResponseOneLine
 from evalia.config import cache_dir
 
@@ -74,7 +74,7 @@ class Evaluator:
         '''
         super().__init__()
 
-        self.managers: List[ModelManager] = []
+        self.managers: List[LanguageModelManager] = []
 
         # Set other attributes
         self.evaluator_id = evaluator_id
@@ -106,7 +106,7 @@ class Evaluator:
 
         logger.info(f'"{self.evaluator_id}" created')
 
-    def add_manager(self, manager: ModelManager):
+    def add_manager(self, manager: LanguageModelManager):
         self.managers.append(manager)
         return self
 
@@ -221,7 +221,7 @@ class Evaluator:
         '''
         return text
 
-    def save_llm_responses(self, llm_responses: List[ModelResponse], llm_name: str):
+    def save_llm_responses(self, llm_responses: List[LanguageModelResponse], llm_name: str):
         try:
             filename = os.path.join(cache_dir(), self.evaluator_id + f"_${llm_name}_responses.json")
             dictlist = [x.dict() for x in llm_responses]

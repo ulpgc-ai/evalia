@@ -21,7 +21,7 @@ import datetime
 import os
 from dataclasses import dataclass
 
-from src.evalia.model_manager import ModelManager, ModelResponse
+from src.evalia.model_manager import LanguageModelManager, LanguageModelResponse
 
 ONE_MINUTE = 60  # One minute in seconds
 
@@ -189,7 +189,7 @@ class RequestQueue:
     
 
 
-class GPTSmartManager(ModelManager):
+class GPTSmartManager(LanguageModelManager):
     """Class to handle the OpenAI API restrictions."""
 
     def __init__(self, api_key: str, model="gpt-3.5-turbo"):
@@ -201,15 +201,15 @@ class GPTSmartManager(ModelManager):
         logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
-    def generate_text(self, prompts: List[str], system_context: str = "", temperature: float = 0.0) -> List[ModelResponse]:
-        responses: List[ModelResponse] = []
+    def generate_text(self, prompts: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+        responses: List[LanguageModelResponse] = []
         for prompt in prompts:
             response = self.query(prompt, system_context, temperature)
-            responses.append(ModelResponse(response = response[0].choices[0].message["content"],
-                                           elapsed_time = response[1]["elapsed_time"],
-                                           input_tokens = response[1]["input_tokens"],
-                                           output_tokens = response[1]["output_tokens"]
-                                           )
+            responses.append(LanguageModelResponse(response = response[0].choices[0].message["content"],
+                                                   elapsed_time = response[1]["elapsed_time"],
+                                                   input_tokens = response[1]["input_tokens"],
+                                                   output_tokens = response[1]["output_tokens"]
+                                                   )
                              )
         return responses
 
