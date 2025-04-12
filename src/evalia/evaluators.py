@@ -242,7 +242,10 @@ class Evaluator:
         '''
         df = self.sample_answers.copy()
         for manager in self.managers:
-            llm_responses = manager.generate_text(prompts = self.build_llm_queries(), system_context = self.build_prompt_preamble(), temperature = self.temperature)
+            llm_responses = manager.generate_text(query_id = self.evaluator_id,
+                                                  query_list= self.build_llm_queries(),
+                                                  system_context = self.build_prompt_preamble(),
+                                                  temperature = self.temperature)
             self.save_llm_responses(llm_responses, manager.get_llm_name())
             text_messages = [x.response for x in llm_responses]
 

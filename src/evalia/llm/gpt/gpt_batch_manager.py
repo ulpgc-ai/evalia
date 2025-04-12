@@ -3,21 +3,16 @@ Diálogo mediante la Batch API de OpenAI.
 Habla con GPT a través de la API de OpenAI. Se le entrega una lista
 de consultas, cada una de ellas en el formato JSON de OpenAI. 
 El sistema devuelve las respuestas de GPT.
-
-Métodos:
-
-- initialize(): pone a punto el sistema
-- count_tokens(): no implementado
-- send_queries(): envía un lote de peticiones a GPT
 """
 
-from typing import Tuple
-from openai import OpenAI
+from typing import List
 from openai.types.chat.chat_completion import ChatCompletion
-from evalia.llm import GPTManager, LanguageModelTask
+from evalia.llm import LanguageModelTask, LanguageModelResponse
 import os
 import json
 import time
+
+from evalia.llm.gpt import GPTManager
 from evalia.logs import get_logger
 
 # OpenAI limits
@@ -34,19 +29,16 @@ class GPTBatchManager(GPTManager):
     '''
 
     def __init__(self,model=""):
-        self.initialize(model)
+        super().__init__(model=model)
         self.batch_api = True
-        logger.info(f"-----------------------------------")
+        logger.info("-----------------------------------")
         logger.info(f"GPTBatchManager started. Model: {self.model}")
 
-    def initialize(self,model=""):
-        """Inicializa el sistema de GPT"""
-        self.client = OpenAI()
-        self.model = model
+    def generate_text(self, query_id: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+        task = self.start_task(query_id, query_list, temperature)
+        return self.get_response(task)
 
-    def count_tokens(self,messages):
-        """No implementado"""
-        return -1
+
 
     def start_task(self, query_id, query_list, temperature) -> LanguageModelTask:
         """
@@ -141,7 +133,7 @@ class GPTBatchManager(GPTManager):
     
     # TODO: ordenar las respuestas según "custom_id" y 
     # poner respuestas nulas en las omitidas
-    def get_response(self, task: LanguageModelTask, timeout=0, retry=1) -> Tuple[list,dict]:
+    def get_response(self, task: LanguageModelTask, timeout=0, retry=1) -> List[LanguageModelResponse]:
         '''
         Obtiene la respuesta de una tarea.
 
@@ -192,63 +184,13 @@ class GPTBatchManager(GPTManager):
         ]
         end_time = max([ t for t in final_times if t is not None ])
         elapsed_time = end_time - batch_object.created_at
-                         
-        stats = {
-            "input_tokens": 
-            sum([ r.usage.prompt_tokens for r in openai_responses ]),
 
-            "output_tokens": 
-            sum([ r.usage.completion_tokens for r in openai_responses ]),
-
-            "elapsed_time": elapsed_time,
-        }
-
-        # bye bye
-        return openai_responses, stats
-
-    
-    def send_queries(self, query_id, query_list, temperature) -> Tuple[list, dict]:
-        task = self.start_task(query_id, query_list, temperature)
-        return self.get_response(task)
-
-# SOME TESTS
-
-def test_gpt_batch():
-    gpt_manager = GPTBatchManager(model="gpt-4o")
-    query_id = "test_query"
-    query_list_simple = [
-        [{"role": "user", "content": "Hola"}],
-        [{"role": "user", "content": "¿Cómo estás?"}]
-    ]
-
-    idiomas = [ "español", "inglés", "francés", "alemán", "italiano", "portugués" ]
-    query_list_200 = [ 
-        [{"role": "user", 
-          "content": 
-          f"dame una palabra en {idiomas[i%len(idiomas)]} de {2+i%20} letras"}]
-        for i in range(0,200)
-     ]
-    temperature = 0.5
-
-    task = gpt_manager.start_task(query_id=query_id, 
-                           query_list=query_list_200, 
-                           temperature=temperature
-                           )
-    
-    messages, stats = gpt_manager.get_response(task)
-
-def get_response_from_task(batch_id):
-    gpt_manager = GPTBatchManager()
-    task = LanguageModelTask(batch_id)
-
-    messages, stats = gpt_manager.get_response(task)
-
-    text_responses = [ m.choices[0].message.content for m in messages ]
-    for i,r in enumerate(text_responses, start=1):
-        print(f"{i}. {r}")
-
-
-if __name__ == "__main__":
-   #test_gpt_batch()
-   get_response_from_task("batch_6720b8474d988190bb6f5d95caa05619")
-   pass
+        lm_responses = []
+        for r in openai_responses:
+            lm_responses.append(LanguageModelResponse(
+                response=r.choices[0].message.content,
+                elapsed_time=elapsed_time,
+                input_tokens=r.usage.prompt_tokens,
+                output_tokens=r.usage.completion_tokens,
+            ))
+        return lm_responses

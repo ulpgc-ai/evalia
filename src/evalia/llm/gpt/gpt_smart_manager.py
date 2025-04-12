@@ -201,9 +201,9 @@ class GPTSmartManager(LanguageModelManager):
         logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
-    def generate_text(self, prompts: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+    def generate_text(self, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
         responses: List[LanguageModelResponse] = []
-        for prompt in prompts:
+        for prompt in query_list:
             response = self.query(prompt, system_context, temperature)
             responses.append(LanguageModelResponse(response = response[0].choices[0].message["content"],
                                                    elapsed_time = response[1]["elapsed_time"],
