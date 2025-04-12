@@ -14,7 +14,7 @@ Métodos:
 from typing import Tuple
 from openai import OpenAI
 from openai.types.chat.chat_completion import ChatCompletion
-from evalia.llm import GPTManager, GPTTask
+from evalia.llm import GPTManager, LanguageModelTask
 import os
 import json
 import time
@@ -33,13 +33,6 @@ class GPTBatchManager(GPTManager):
     Envía las consultas en lotes de respuesta diferida.
     '''
 
-    class GPTBatchTask(GPTTask):
-        '''
-        Tarea de GPTBatchManager.
-        '''
-        def __init__(self, batch_id):
-            self.batch_id = batch_id
-
     def __init__(self,model=""):
         self.initialize(model)
         self.batch_api = True
@@ -55,11 +48,16 @@ class GPTBatchManager(GPTManager):
         """No implementado"""
         return -1
 
-    def start_task(self, query_id, query_list, temperature) -> GPTTask:
-        '''
-        Envía una lista de consultas a GPT. Devuelve un id de batch.
-        '''
-
+    def start_task(self, query_id, query_list, temperature) -> LanguageModelTask:
+        """
+        Sends a list of queries to GPT
+        Args:
+            query_id: id of the batch
+            query_list: list of queries
+            temperature: temperature for the model
+        Returns:
+            LanguageModelTask: task object with the batch id
+        """
         # Prepare the JSONL file with the batch
         batch_jsonl_file = self._build_jsonl_file(
             query_id, query_list, temperature
@@ -89,7 +87,7 @@ class GPTBatchManager(GPTManager):
         logger.info(f'Batch ID "{query_id}". queries={len(query_list)} temperature={temperature}')
 
         # return the task
-        return self.GPTBatchTask(batch.id)
+        return LanguageModelTask(batch.id)
 
     def _build_jsonl_file(self,query_id, query_list, temperature):
             '''
@@ -126,25 +124,24 @@ class GPTBatchManager(GPTManager):
                 f"File size {file_size} exceeds limit {MAX_BATCH_SIZE}"
             return jsonl_filename
 
-    def cancel_task(self, task: GPTBatchTask):
+    def cancel_task(self, task: LanguageModelTask):
         '''Cancela una tarea.'''
-        self.client.batches.cancel(task.batch_id)
+        self.client.batches.cancel(task.id)
 
-    def save_task(self, task: GPTTask, filename: str):
+    def save_task(self, task: LanguageModelTask, filename: str):
         '''Guarda una tarea en un archivo.'''
         with open(filename, "w") as f:
-            f.write(task.batch_id)
+            f.write(task.id)
 
-    def load_task(self, filename: str) -> GPTTask:
+    def load_task(self, filename: str) -> LanguageModelTask:
         '''Carga una tarea desde un archivo.'''
         with open(filename, "r") as f:
             batch_id = f.read()
-        return self.GPTBatchTask(batch_id)
+        return LanguageModelTask(batch_id)
     
     # TODO: ordenar las respuestas según "custom_id" y 
     # poner respuestas nulas en las omitidas
-    def get_response(self, task: GPTBatchTask,
-                     timeout=0, retry=1) -> Tuple[list,dict]:
+    def get_response(self, task: LanguageModelTask, timeout=0, retry=1) -> Tuple[list,dict]:
         '''
         Obtiene la respuesta de una tarea.
 
@@ -154,7 +151,7 @@ class GPTBatchManager(GPTManager):
             retry: tiempo de espera entre intentos (segundos). Si es cero, solo intenta una vez.
         '''
         start_time = time.time()
-        batch_id = task.batch_id
+        batch_id = task.id
         batch_object = self.client.batches.retrieve(batch_id)
 
         # Wait until batch reaches a final state or timeout is reached
@@ -242,7 +239,7 @@ def test_gpt_batch():
 
 def get_response_from_task(batch_id):
     gpt_manager = GPTBatchManager()
-    task = GPTBatchManager.GPTBatchTask(batch_id)
+    task = LanguageModelTask(batch_id)
 
     messages, stats = gpt_manager.get_response(task)
 

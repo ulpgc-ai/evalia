@@ -2,6 +2,8 @@ import unittest
 from unittest.mock import patch, mock_open
 
 from evalia.gpt_manager.gpt_batch_manager import GPTBatchManager
+
+from evalia.llm import LanguageModelTask
 from .utils import high_cost
 
 import time
@@ -63,12 +65,10 @@ class TestGPTBatchManager(unittest.TestCase):
         ]
         temperature = 0.7
 
-        task: GPTBatchManager.GPTBatchTask = gpt_manager.start_task(
-            query_id, query_list, temperature
-            )
+        task: LanguageModelTask = gpt_manager.start_task(query_id, query_list, temperature)
 
-        self.assertIsInstance(task, GPTBatchManager.GPTBatchTask)
-        self.assertIsInstance(task.batch_id, str)
+        self.assertIsInstance(task, LanguageModelTask)
+        self.assertIsInstance(task.id, str)
         #self.assertEqual(task.batch_id.endpoint, "/v1/chat/completions")
         #self.assertEqual(task.batch_id.completion_window, "24h")
         #self.assertEqual(task.batch_id.metadata, {"description": query_id})
