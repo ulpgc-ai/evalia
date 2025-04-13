@@ -11,9 +11,9 @@ from openai.types.chat import ChatCompletionDeveloperMessageParam, ChatCompletio
     ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, \
     ChatCompletionFunctionMessageParam
 
+from evalia.llm.gpt import GPTManager
 from src.evalia.logs import get_logger
 
-from openai import OpenAI
 import time
 import copy
 import tiktoken
@@ -21,7 +21,7 @@ import datetime
 import os
 from dataclasses import dataclass
 
-from src.evalia.llm import LanguageModelManager, LanguageModelResponse
+from src.evalia.llm import LanguageModelResponse
 
 ONE_MINUTE = 60  # One minute in seconds
 
@@ -36,7 +36,7 @@ logger = get_logger(__name__)
 
 HistoryRecord = namedtuple('HistoryRecord', ['request', 'time', 'tokens_in_last_minute', 'requests_in_last_minute'])
 
-# Dataclass to declare tier-N limits: 
+# Dataclass to declare tier-N limits:
 # requests per minute (rpm) and tokens per minute (tpm)
 @dataclass(frozen=True)
 class OpenAILimits:
@@ -119,13 +119,13 @@ class RequestQueue:
             f"RequestQueue created for model {model}, "
             f"{OPENAI_TIER}. Limits: {limits}."
         ))
-  
+
     def __repr__(self):
         return f"RequestQueue(tokens={self.current_minute_tokens}, queue={self.queue})"
-    
+
     def __len__(self):
         return len(self.queue)
-    
+
     def add(self, request):
         """Add a request to the queue."""
         if request.tokens > self.tpm:
@@ -146,7 +146,7 @@ class RequestQueue:
                 f"We will wait {ONE_MINUTE - (time.time() - self.queue[0].time)} seconds."
                 ))
             # Wait until the first request is more than one minute old.
-            time.sleep(max(ONE_MINUTE - (time.time() - self.queue[0].time), 0))  
+            time.sleep(max(ONE_MINUTE - (time.time() - self.queue[0].time), 0))
 
         self.queue.append(request)
         self.current_minute_tokens += request.tokens
@@ -156,15 +156,15 @@ class RequestQueue:
             f"Tokens in last minute: {self.current_minute_tokens}, "
             f"Requests in last minute: {self.current_minute_requests}"
             ))
-        
+
         hr = HistoryRecord(
-            request=copy.deepcopy(request), 
+            request=copy.deepcopy(request),
             time=time.time() - self.start_time,
             tokens_in_last_minute=self.current_minute_tokens,
             requests_in_last_minute=self.current_minute_requests
         )
         self.history.append(hr)
-        
+
 
     def remove_more_than_one_minute_old(self):
         while len(self.queue) > 0 and self.queue[0].time < (time.time() - ONE_MINUTE):
@@ -175,53 +175,47 @@ class RequestQueue:
     def tokens_in_last_minute(self):
         self.remove_more_than_one_minute_old()
         return self.current_minute_tokens
-    
+
     def requests_in_last_minute(self):
         self.remove_more_than_one_minute_old()
         return self.current_minute_requests
-    
+
     def sent_tokens(self):
         return sum([hr.request.tokens for hr in self.history])
-    
+
     def modify_last_request(self, new_tokens):
         self.current_minute_tokens += new_tokens - self.queue[-1].tokens
         self.queue[-1].tokens = new_tokens
-    
 
 
-class GPTSmartManager(LanguageModelManager):
+
+class GPTSmartManager(GPTManager):
     """Class to handle the OpenAI API restrictions."""
 
-    def __init__(self, api_key: str, model="gpt-3.5-turbo"):
-        super().__init__(model, api_key)
-
+    def __init__(self, model="gpt-3.5-turbo"):
+        super().__init__(model)
         self.request_queue = RequestQueue(model)
-        self.client = OpenAI(api_key=api_key)
-
         logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
-    def generate_text(self, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+    def generate_text(self, query_id: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
         responses: List[LanguageModelResponse] = []
         for prompt in query_list:
             response = self.query(prompt, system_context, temperature)
-            responses.append(LanguageModelResponse(response = response[0].choices[0].message["content"],
-                                                   elapsed_time = response[1]["elapsed_time"],
-                                                   input_tokens = response[1]["input_tokens"],
-                                                   output_tokens = response[1]["output_tokens"]
+            responses.append(LanguageModelResponse(response=response[0].choices[0].message["content"],
+                                                   elapsed_time=response[1]["elapsed_time"],
+                                                   input_tokens=response[1]["input_tokens"],
+                                                   output_tokens=response[1]["output_tokens"]
                                                    )
                              )
         return responses
-
-    def get_llm_name(self) -> str:
-        return "OpenAI"
 
     def _initialize_encoding(self):
         if self.model.startswith("gpt-4"):
             self.encoding = tiktoken.get_encoding("cl100k_base")
         else:
             self.encoding = tiktoken.encoding_for_model(self.model)
-    
+
     def count_tokens(self, messages):
         """Returns the number of tokens used by a list of messages."""
         num_tokens = 0
@@ -234,7 +228,7 @@ class GPTSmartManager(LanguageModelManager):
         num_tokens += 2  # every reply is primed with <im_start>assistant
         return num_tokens
 
-    
+
     def query(self, message: str, system_context: str = "", temperature: float = 0.0):
         """
         Send a query to the OpenAI API.
