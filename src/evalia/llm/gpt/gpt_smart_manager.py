@@ -11,6 +11,7 @@ from openai.types.chat import ChatCompletionDeveloperMessageParam, ChatCompletio
     ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, \
     ChatCompletionFunctionMessageParam
 
+from evalia.llm import SmartManager
 from evalia.llm.gpt import GPTManager
 from src.evalia.logs import get_logger
 
@@ -189,7 +190,7 @@ class RequestQueue:
 
 
 
-class GPTSmartManager(GPTManager):
+class GPTSmartManager(GPTManager, SmartManager):
     """Class to handle the OpenAI API restrictions."""
 
     def __init__(self, model="gpt-3.5-turbo"):
@@ -216,8 +217,7 @@ class GPTSmartManager(GPTManager):
         else:
             self.encoding = tiktoken.encoding_for_model(self.model)
 
-    def count_tokens(self, messages):
-        """Returns the number of tokens used by a list of messages."""
+    def count_tokens(self, messages: List[str]) -> int:
         num_tokens = 0
         for message in messages:
             num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
