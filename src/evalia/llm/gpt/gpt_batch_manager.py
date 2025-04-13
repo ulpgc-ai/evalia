@@ -34,7 +34,7 @@ class GPTBatchManager(GPTManager, BatchManager):
         logger.info("-----------------------------------")
         logger.info(f"GPTBatchManager started. Model: {self.model}")
 
-    def generate_text(self, query_id: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+    def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
         task = self.start_task(query_id, query_list, temperature)
         return self.get_response(task)
 

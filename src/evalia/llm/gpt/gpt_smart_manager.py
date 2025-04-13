@@ -196,14 +196,15 @@ class GPTSmartManager(GPTManager, SmartManager):
     def __init__(self, model="gpt-3.5-turbo"):
         super().__init__(model)
         self.request_queue = RequestQueue(model)
+        self._initialize_encoding()
         logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
-    def generate_text(self, query_id: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+    def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
         responses: List[LanguageModelResponse] = []
         for prompt in query_list:
-            response = self.query(prompt, system_context, temperature)
-            responses.append(LanguageModelResponse(response=response[0].choices[0].message["content"],
+            response = self.query(self.convert_to_gpt_messages(prompt, initial_prompt, system_context), temperature)
+            responses.append(LanguageModelResponse(response=response[0].choices[0].message.content,
                                                    elapsed_time=response[1]["elapsed_time"],
                                                    input_tokens=response[1]["input_tokens"],
                                                    output_tokens=response[1]["output_tokens"]
@@ -217,7 +218,7 @@ class GPTSmartManager(GPTManager, SmartManager):
         else:
             self.encoding = tiktoken.encoding_for_model(self.model)
 
-    def count_tokens(self, messages: List[str]) -> int:
+    def count_tokens(self, messages: List[dict]) -> int:
         num_tokens = 0
         for message in messages:
             num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
@@ -229,7 +230,7 @@ class GPTSmartManager(GPTManager, SmartManager):
         return num_tokens
 
 
-    def query(self, message: str, system_context: str = "", temperature: float = 0.0):
+    def query(self, messages: List[dict], temperature: float = 0.0):
         """
         Send a query to the OpenAI API.
         A query is a list of messages, each message is a dictionary with the following keys:
@@ -238,7 +239,7 @@ class GPTSmartManager(GPTManager, SmartManager):
         """
 
         # Before sending the messages, check if the restrictions are met int the last minute
-        nt = self.count_tokens(message)  # Calculate the number of tokens in the prompt
+        nt = self.count_tokens(messages)  # Calculate the number of tokens in the prompt
         self.request_queue.add(Request(nt + 6))  # Request creation with 6 extra tokens from the answer prompt
 
         chat_successful = False
@@ -246,9 +247,7 @@ class GPTSmartManager(GPTManager, SmartManager):
             try:
                 chat_completion = self.client.chat.completions.create(
                     model=self.model,
-                    messages=[GPTSmartManager.create_openai_message("system", system_context),
-                              GPTSmartManager.create_openai_message("user", message)
-                              ],
+                    messages=messages,
                     temperature=temperature,
                     )
                 chat_successful = True

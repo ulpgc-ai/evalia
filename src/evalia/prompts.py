@@ -23,30 +23,22 @@ class PromptSource(ABC):
 class PromptFromString(PromptSource):
     '''La fuente del prompt es un texto en memoria'''
 
-    def __init__(self,prompt_text):
+    def __init__(self, prompt_text: str):
         self.prompt_text = prompt_text
 
     def get_prompt(self):
-        prompt_preamble = [
-            {   "role": "system", 
-                "content": (
-                    "Eres un asistente colaborador. "
-                    "En tus respuestas cíñete estrictamente a las instrucciones dadas. "
-                    "No aportes explicaciones ni justificaciones adicionales."
-                )
-            },
-            {   "role": "user", 
-                "content": self.prompt_text },
-            {   'role': 'assistant', 
-                'content': 'Sí, he entendido las instrucciones. Pásame las respuestas para evaluar.' 
-            }
-        ]
-        return prompt_preamble
+        system_context = (
+            "Eres un asistente colaborador. "
+            "En tus respuestas cíñete estrictamente a las instrucciones dadas. "
+            "No aportes explicaciones ni justificaciones adicionales."
+        )
+        initial_prompt = self.prompt_text
+        return system_context, initial_prompt
 
 class PromptFromTextFile(PromptSource):
     '''La fuente del prompt es un fichero de texto plano'''
 
-    def __init__(self,prompt_filename):
+    def __init__(self, prompt_filename: str):
         self.prompt_filename = prompt_filename
 
     def get_prompt(self):
@@ -64,22 +56,14 @@ class PromptFromStringCoT(PromptSource):
         self.prompt_text = prompt_text
 
     def get_prompt(self):
-        prompt_preamble = [
-            {   "role": "system", 
-                "content": (
-                    "Actúa como un evaluador de pruebas académicas. "
-                    "En tus evaluaciones, desarrolla los razonamientos que llevan a tus conclusiones. "
-                    "Nunca alcances una conclusión sin haber explicitado el razonamiento previo. "
-                    "Cumple estrictamente las instrucciones sobre los formatos de tu respuesta."
-               )
-            },
-            {   "role": "user", 
-                "content": self.prompt_text },
-            {   'role': 'assistant', 
-                'content': 'He entendido las instrucciones. Pásame las respuestas para evaluar.' 
-            }
-        ]
-        return prompt_preamble
+        system_context = (
+            "Actúa como un evaluador de pruebas académicas. "
+            "En tus evaluaciones, desarrolla los razonamientos que llevan a tus conclusiones. "
+            "Nunca alcances una conclusión sin haber explicitado el razonamiento previo. "
+            "Cumple estrictamente las instrucciones sobre los formatos de tu respuesta."
+        )
+        initial_prompt = self.prompt_text
+        return system_context, initial_prompt
 
 
 class PromptFromTextFileCoT(PromptSource):

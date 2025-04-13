@@ -178,13 +178,6 @@ class Evaluator:
         '''
         return text
 
-    def gpt_input_text(self,index,student_answer):
-        '''format one answer as GPT text: a JSON list'''
-        processed_answer = self.preprocess_one_answer(student_answer)
-        json_student_answer = json.dumps(processed_answer)
-        json_list = f'[ {index}, {json_student_answer} ]'
-        return json_list
-
     def build_llm_queries(self):
         if isinstance(self.responses_column, int):
             responses = self.sample_answers.iloc[:, self.responses_column]
@@ -192,23 +185,19 @@ class Evaluator:
             responses = self.sample_answers[self.responses_column]
         else:
             raise TypeError("Tipo de columna de respuestas no soportado.")
-        return [self.build_prompt_preamble() + batch for batch in self.partition_batches(responses)]
+        return self.partition_batches(responses)
 
-    def partition_batches(self, responses):
+    def partition_batches(self, responses) -> List[str]:
         """ Divides the responses into batches according to `self.query_batch_length` """
         total_responses = len(responses)
         batches = []
 
         for i in range(0, total_responses, self.query_batch_length):
             batch = responses.iloc[i:i + self.query_batch_length]
-            batch_messages = [
-                {
-                    'role': 'user',
-                    'content': self.gpt_input_text(index, self.preprocess_one_answer(answer))
-                }
-                for index, answer in batch.items()
-            ]
-            batches.append(batch_messages)
+            message = ""
+            for index, answer in batch.items():
+                message += f'[ {index}, {answer} ]\n'
+            batches.append(message)
 
         return batches
 
@@ -230,7 +219,7 @@ class Evaluator:
         except:
             pass
 
-    def evaluate_answers(self):
+    def evaluate_answers(self) -> pd.DataFrame:
         '''
         Recupera la respuesta del LLM, la procesa y
         extrae las evaluaciones correspondientes a cada respuesta
@@ -242,16 +231,18 @@ class Evaluator:
         '''
         df = self.sample_answers.copy()
         for manager in self.managers:
+            system_context, initial_prompt = self.build_prompt_preamble()
             llm_responses = manager.generate_text(query_id = self.evaluator_id,
+                                                  initial_prompt = initial_prompt,
                                                   query_list= self.build_llm_queries(),
-                                                  system_context = self.build_prompt_preamble(),
+                                                  system_context = system_context,
                                                   temperature = self.temperature)
             self.save_llm_responses(llm_responses, manager.get_llm_name())
             text_messages = [x.response for x in llm_responses]
 
             # me obliga a usar la clase dos veces: como objeto y también como argumento
             extractor = self.gpt_response_class
-            gpt_responses = extractor.extract_responses(text_messages)
+            gpt_responses = extractor.extract_responses(extractor, text_messages)
 
             # a partir de gpt_lines, obtener listas indexadas de respuestas y evaluaciones
             get_score = lambda x: self.postprocess_one_gpt_response(x.get_assessment())
