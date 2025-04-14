@@ -3,7 +3,7 @@ import unittest
 import pandas as pd
 from evalia.evaluators import Evaluator
 from evalia.prompts import PromptFromString
-from evalia.llm.gpt import GPTManager, GPTSmartManager, GPTBatchManager
+from evalia.llm.gpt import GPTMockManager
 
 # Usamos un modelo mock para no generar interacción con OpenAI
 MODELO_GPT = 'gpt-4o-mini'
@@ -35,67 +35,51 @@ respuestas_estudiantes = {
     "calificación real": [1, 1, 0, 0, 0, 1, 0]
 }
 
+
+def new_evaluator():
+    return Evaluator(
+        evaluator_id = "capitales europeas",
+        student_responses = pd.DataFrame(respuestas_estudiantes),
+        prompt = PromptFromString(PROMPT),
+        query_batch_length=20
+    ).add_manager(GPTMockManager())
+
+
 class TestEvaluator(unittest.TestCase):
 
-    def new_evaluator(self):
-        return Evaluator(
-            evaluator_id = "capitales europeas",
-            student_responses = pd.DataFrame(respuestas_estudiantes),
-            prompt = PromptFromString(PROMPT),
-            gpt_manager = 'mock',
-            query_batch_length=20
-        )
-    
     def test_init_gpt_manager(self):
         evaluator1 = Evaluator()
-        self.assertEqual(evaluator1.gpt_manager, None)
-        evaluator1.batch_api = True
-        self.assertEqual(evaluator1.batch_api, True)
-        evaluator1.model = 'gpt-4'
-        self.assertEqual(evaluator1.model, 'gpt-4')
-        self.assertIsInstance(evaluator1.gpt_manager, GPTBatchManager)
+        self.assertEqual(evaluator1.managers, [])
 
-        evaluator2 = Evaluator(gpt_manager='gpt-4')
-        self.assertIsInstance(evaluator2.gpt_manager, GPTManager)
-        self.assertEqual(evaluator2.gpt_manager.model, 'gpt-4')
-        self.assertEqual(evaluator2.gpt_manager.batch_api, False)
-        evaluator2.model = 'gpt-4o'
-        self.assertEqual(evaluator2.model, 'gpt-4o')
-        self.assertEqual(evaluator2.gpt_manager.model, 'gpt-4o')    
-        self.assertEqual(evaluator2.gpt_manager.batch_api, False)
-
-        evaluator3 = Evaluator(model='gpt-4o')
-        self.assertIsInstance(evaluator3.gpt_manager, GPTSmartManager)
-        self.assertEqual(evaluator3.gpt_manager.model, 'gpt-4o')
-        self.assertEqual(evaluator3.gpt_manager.batch_api, False)
-        evaluator3.batch_api = True
-        self.assertIsInstance(evaluator3.gpt_manager, GPTBatchManager)
-
+    def test_add_llm_manager(self):
+        evaluator = Evaluator()
+        evaluator.add_manager(GPTMockManager())
+        self.assertEqual(len(evaluator.managers), 1)
 
     def test_df_salida(self):
-        evaluator = self.new_evaluator()
-        df_result = evaluator.run()
+        evaluator = new_evaluator()
+        df_result = evaluator.evaluate_answers()
         self.assertIsInstance(df_result, pd.DataFrame)
         self.assertEqual(df_result.shape[0], 7)
         self.assertEqual(df_result.shape[1], 4)
         columnas_resultado = df_result.columns
-        self.assertTrue("respuesta" in columnas_resultado)
-        self.assertTrue("calificación real" in columnas_resultado)
-        self.assertTrue("evaluación IA" in columnas_resultado)
-        self.assertTrue("respuesta completa IA" in columnas_resultado)
+        self.assertIn("respuesta", columnas_resultado)
+        self.assertIn("calificación real", columnas_resultado)
+        self.assertIn("evaluación GPT", columnas_resultado)
+        self.assertIn("respuesta completa GPT", columnas_resultado)
 
     def test_openai(self):
-        evaluator = self.new_evaluator()
+        evaluator = new_evaluator()
         evaluator.gpt_manager = MODELO_GPT
-        df_result = evaluator.run()
+        df_result = evaluator.evaluate_answers()
         self.assertIsInstance(df_result, pd.DataFrame)
         self.assertEqual(df_result.shape[0], 7)
         self.assertEqual(df_result.shape[1], 4)
         columnas_resultado = df_result.columns
-        self.assertTrue("respuesta" in columnas_resultado)
-        self.assertTrue("calificación real" in columnas_resultado)
-        self.assertTrue("evaluación IA" in columnas_resultado)
-        self.assertTrue("respuesta completa IA" in columnas_resultado)
+        self.assertIn("respuesta", columnas_resultado)
+        self.assertIn("calificación real", columnas_resultado)
+        self.assertIn("evaluación GPT", columnas_resultado)
+        self.assertIn("respuesta completa GPT", columnas_resultado)
 
 
 if __name__ == '__main__':
