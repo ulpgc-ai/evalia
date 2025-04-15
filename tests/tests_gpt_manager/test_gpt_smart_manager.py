@@ -1,6 +1,9 @@
 import unittest
+from typing import List
 from unittest.mock import patch
-from evalia.gpt_manager.gpt_smart_manager import Request, RequestQueue, HistoryRecord, GPTSmartManager
+
+from evalia.llm import LanguageModelResponse
+from evalia.llm.gpt import Request, RequestQueue, GPTSmartManager
 import time
 import random
 
@@ -78,26 +81,22 @@ class TestGPTManager(unittest.TestCase):
 
     def test_bad_message(self):
         gpt_manager = GPTSmartManager(model="gpt-4")
-        with self.assertRaises(Exception) as context:
-            response = gpt_manager.query("this is a wrongly formatted message")
+        with self.assertRaises(Exception):
+            gpt_manager.query("this is a wrongly formatted message")
 
     def test_send_queries(self):
         gpt_manager = GPTSmartManager(model="gpt-4")
-        query_list = [
-            [{"role" : "user", "content" : "Hola"}],
-            [{"role" : "user", "content" : "Hola, dime hola."}],
-        ]
-        responses, stats = gpt_manager.send_queries(
+        query_list = ["Hola", "Hola, dime hola."]
+        llm_responses: List[LanguageModelResponse] = gpt_manager.generate_text(
             query_id="test",
+            initial_prompt="",
             query_list=query_list,
             temperature=0.0
         )
-        self.assertEqual(len(responses), 2)
-        # check that stats is a dict with a key "input_tokens" with a numeric value
-        self.assertIsInstance(stats, dict)
-        self.assertIn("input_tokens", stats)
-        self.assertIn("output_tokens", stats)
-        self.assertIn("elapsed_time", stats)
+        self.assertEqual(len(llm_responses), 2)
+        self.assertIsInstance(llm_responses, list)
+        for response in llm_responses:
+            self.assertIsInstance(response, LanguageModelResponse)
 
     def test_bad_queries(self):
         gpt_manager = GPTSmartManager(model="gpt-4")

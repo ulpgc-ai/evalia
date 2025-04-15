@@ -11,7 +11,7 @@ from openai.types.chat import ChatCompletionDeveloperMessageParam, ChatCompletio
     ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, \
     ChatCompletionFunctionMessageParam
 
-from evalia.llm import SmartManager
+from evalia.llm import SmartManager, LanguageModelResponse
 from evalia.llm.gpt import GPTManager
 from src.evalia.logs import get_logger
 
@@ -21,8 +21,6 @@ import tiktoken
 import datetime
 import os
 from dataclasses import dataclass
-
-from src.evalia.llm import LanguageModelResponse
 
 ONE_MINUTE = 60  # One minute in seconds
 
