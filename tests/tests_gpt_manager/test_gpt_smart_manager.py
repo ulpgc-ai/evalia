@@ -1,3 +1,5 @@
+import os
+import pickle
 import unittest
 from typing import List
 from unittest.mock import patch
@@ -118,6 +120,24 @@ class TestGPTManager(unittest.TestCase):
                 query_list=[{"role" : "user", "content" : "Hola"}, "bad query"],
                temperature=0.0
                  )
+
+    def test_serialize(self):
+        gpt_smart_manager = GPTSmartManager(model="gpt-4o-mini")
+        gpt_file_name = 'data.pkl'
+        self.addCleanup(lambda: os.remove(gpt_file_name) if os.path.exists(gpt_file_name) else None)
+
+        with open(gpt_file_name, 'wb') as file:
+            pickle.dump(gpt_smart_manager, file)
+        self.assertTrue(os.path.exists(gpt_file_name))
+
+        with open(gpt_file_name, 'rb') as file:
+            loaded_manager = pickle.load(file)
+
+        self.assertIsInstance(loaded_manager, GPTSmartManager)
+        self.assertEqual(loaded_manager.model, "gpt-4o-mini")
+        self.assertIsNotNone(loaded_manager.client)
+        self.assertIsNotNone(loaded_manager.encoding)
+
         
 if __name__ == '__main__':
     unittest.main()

@@ -10,6 +10,7 @@ from typing import List, Union, Literal
 from openai.types.chat import ChatCompletionDeveloperMessageParam, ChatCompletionSystemMessageParam, \
     ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, \
     ChatCompletionFunctionMessageParam
+from tiktoken import Encoding
 
 from evalia.llm import SmartManager, LanguageModelResponse
 from evalia.llm.gpt import GPTManager
@@ -194,7 +195,7 @@ class GPTSmartManager(GPTManager, SmartManager):
     def __init__(self, model="gpt-3.5-turbo"):
         super().__init__(model)
         self.request_queue = RequestQueue(model)
-        self._initialize_encoding()
+        self.encoding = self._initialize_encoding()
         logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
@@ -210,11 +211,11 @@ class GPTSmartManager(GPTManager, SmartManager):
                              )
         return responses
 
-    def _initialize_encoding(self):
+    def _initialize_encoding(self) -> Encoding:
         if self.model.startswith("gpt-4"):
-            self.encoding = tiktoken.get_encoding("cl100k_base")
+            return tiktoken.get_encoding("cl100k_base")
         else:
-            self.encoding = tiktoken.encoding_for_model(self.model)
+            return tiktoken.encoding_for_model(self.model)
 
     def count_tokens(self, messages: List[dict]) -> int:
         num_tokens = 0
@@ -295,6 +296,15 @@ class GPTSmartManager(GPTManager, SmartManager):
                 }
             ]
         }
+
+    def __getstate__(self):
+        state = super().__getstate__()
+        state["encoding"] = None
+        return state
+
+    def __setstate__(self, state):
+        super().__setstate__(state)
+        self.encoding = self._initialize_encoding()
 
 if __name__ == "__main__":
     import os
