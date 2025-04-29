@@ -1,4 +1,5 @@
 import os
+import pickle
 from typing import List
 
 from google import genai
@@ -11,7 +12,11 @@ class GeminiManager(LanguageModelManager):
 
     def __init__(self, model):
         super().__init__(model=model)
-        self.client = genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+        self.client = self.initialize_client()
+
+    @staticmethod
+    def initialize_client():
+        return genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
     def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
         responses = []
@@ -33,3 +38,24 @@ class GeminiManager(LanguageModelManager):
 
     def get_llm_name(self) -> str:
         return "Gemini"
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["client"] = None
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.client = self.initialize_client()
+
+def test_serialize():
+    smart_manager = GeminiManager(model="gemini-2.0-flash")
+    with open('data.pkl', 'wb') as file:
+        pickle.dump(smart_manager, file)
+
+def test_deserialize():
+    with open('data.pkl', 'rb') as file:
+        smart_manager = pickle.load(file)
+    assert isinstance(smart_manager, GeminiManager)
+    assert smart_manager.model == "gemini-2.0-flash"
+    assert smart_manager.client is not None
