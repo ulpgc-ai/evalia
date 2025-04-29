@@ -200,6 +200,8 @@ class GPTSmartManager(GPTManager, SmartManager):
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
     def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+        if self.responses:
+            return self.responses
         responses: List[LanguageModelResponse] = []
         for prompt in query_list:
             response = self.query(GPTManager.convert_to_gpt_messages(prompt, initial_prompt, system_context), temperature)
@@ -209,6 +211,7 @@ class GPTSmartManager(GPTManager, SmartManager):
                                                    output_tokens=response[1]["output_tokens"]
                                                    )
                              )
+        self.responses = responses
         return responses
 
     def _initialize_encoding(self) -> Encoding:

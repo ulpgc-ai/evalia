@@ -123,6 +123,8 @@ class TestGPTManager(unittest.TestCase):
 
     def test_serialize(self):
         gpt_smart_manager = GPTSmartManager(model="gpt-4o-mini")
+        fake_response = LanguageModelResponse(response="Hola", elapsed_time=0, input_tokens=1, output_tokens=1)
+        gpt_smart_manager.responses = [fake_response]
         gpt_file_name = 'data.pkl'
         self.addCleanup(lambda: os.remove(gpt_file_name) if os.path.exists(gpt_file_name) else None)
 
@@ -135,6 +137,8 @@ class TestGPTManager(unittest.TestCase):
 
         self.assertIsInstance(loaded_manager, GPTSmartManager)
         self.assertEqual(loaded_manager.model, "gpt-4o-mini")
+        self.assertEqual(len(loaded_manager.responses), 1)
+        self.assertEqual(loaded_manager.responses[0].response, "Hola")
         self.assertIsNotNone(loaded_manager.client)
         self.assertIsNotNone(loaded_manager.encoding)
 

@@ -19,6 +19,8 @@ class GeminiManager(LanguageModelManager):
         return genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
     def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+        if self.responses:
+            return self.responses
         responses = []
         for prompt in query_list:
             gemini_response = self.client.models.generate_content(
@@ -34,6 +36,7 @@ class GeminiManager(LanguageModelManager):
                     output_tokens=len(gemini_response.text.split())
                 )
             )
+        self.responses = responses
         return responses
 
     def get_llm_name(self) -> str:
