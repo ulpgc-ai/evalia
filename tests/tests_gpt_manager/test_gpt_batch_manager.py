@@ -1,3 +1,4 @@
+import pickle
 import unittest
 from unittest.mock import patch, mock_open
 
@@ -133,9 +134,30 @@ def mock_chat_completion_create(model, messages):
     return json
         
 
-@unittest.skip("Skip this class for now")
 class TestGPTManager(unittest.TestCase):
 
+    def test_serialize(self):
+        gpt_batch_manager = GPTBatchManager(model="gpt-4o-mini")
+        gpt_batch_manager.task = LanguageModelTask("test_task")
+        gpt_file_name = 'data.pkl'
+        self.addCleanup(lambda: os.remove(gpt_file_name) if os.path.exists(gpt_file_name) else None)
+
+
+        with open(gpt_file_name, 'wb') as file:
+            pickle.dump(gpt_batch_manager, file)
+        self.assertTrue(os.path.exists(gpt_file_name))
+
+        with open(gpt_file_name, 'rb') as file:
+            loaded_manager = pickle.load(file)
+
+        self.assertIsInstance(loaded_manager, GPTBatchManager)
+        self.assertEqual(loaded_manager.model, "gpt-4o-mini")
+        self.assertIsNotNone(loaded_manager.client)
+        self.assertIsInstance(loaded_manager.task, LanguageModelTask)
+        self.assertEqual(loaded_manager.task.id, "test_task")
+
+
+    @unittest.skip("Skip this test for now")
     @patch('openai.chat.completions.create', side_effect=mock_chat_completion_create)
     def test_basic_interaction(self, mock_chat_completion_create):
         gpt_manager = GPTBatchManager(model="gpt-4")
@@ -146,11 +168,13 @@ class TestGPTManager(unittest.TestCase):
         self.assertIn("Hola", response[0].choices[0].message.content)
         self.assertEqual(response[0].choices[0].finish_reason, "stop")
 
+    @unittest.skip("Skip this test for now")
     def test_bad_message(self):
         gpt_manager = GPTBatchManager(model="gpt-4")
         with self.assertRaises(Exception) as context:
             response = gpt_manager.query("this is a wrongly formatted message")
 
+    @unittest.skip("Skip this test for now")
     def test_send_queries(self):
         gpt_manager = GPTBatchManager(model="gpt-4")
         query_list = [
@@ -169,6 +193,7 @@ class TestGPTManager(unittest.TestCase):
         self.assertIn("output_tokens", stats)
         self.assertIn("elapsed_time", stats)
 
+    @unittest.skip("Skip this test for now")
     def test_bad_queries(self):
         gpt_manager = GPTBatchManager(model="gpt-4")
         with self.assertRaises(Exception) as context:
