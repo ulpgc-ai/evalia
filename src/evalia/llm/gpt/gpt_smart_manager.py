@@ -201,7 +201,7 @@ class GPTSmartManager(GPTManager, SmartManager):
     def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
         responses: List[LanguageModelResponse] = []
         for prompt in query_list:
-            response = self.query(self.convert_to_gpt_messages(prompt, initial_prompt, system_context), temperature)
+            response = self.query(GPTManager.convert_to_gpt_messages(prompt, initial_prompt, system_context), temperature)
             responses.append(LanguageModelResponse(response=response[0].choices[0].message.content,
                                                    elapsed_time=response[1]["elapsed_time"],
                                                    input_tokens=response[1]["input_tokens"],

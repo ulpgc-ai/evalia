@@ -26,10 +26,12 @@ class GPTManager(LanguageModelManager):
     def get_llm_name(self) -> str:
         return "GPT"
 
-    def convert_to_gpt_messages(self, query: str, initial_prompt: str, system_context: str) -> List[dict]:
+    @staticmethod
+    def convert_to_gpt_messages(query: str, initial_prompt: str, system_context: str) -> List[dict]:
         """
         Builds a message list formatted for the OpenAI Chat API.
         :param query: The user query or batch of responses to be evaluated.
+        :param initial_prompt: The initial prompt to be used for the query, with initial context and the question to be evaluated.
         :param system_context: Instructional context to be included in the message sequence.
         :return: A list of messages structured in the format expected by OpenAI.
         """
