@@ -17,7 +17,11 @@ class GPTManager(LanguageModelManager):
 
     def __init__(self, model: str):
         super().__init__(model)
-        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        self.client = self.initialize_client()
+
+    @staticmethod
+    def initialize_client():
+        return OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
     @abstractmethod
     def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
@@ -53,3 +57,12 @@ class GPTManager(LanguageModelManager):
                 "content": json.dumps(query)
             }
         ]
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state["client"] = None
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.client = self.initialize_client()
