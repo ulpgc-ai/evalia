@@ -9,6 +9,7 @@ class LanguageModelManager(ABC):
 
     def __init__(self, model: str):
         self.model = model
+        self.responses: List[LanguageModelResponse] = []
 
     @abstractmethod
     def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
