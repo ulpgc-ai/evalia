@@ -5,6 +5,10 @@ from evalia.llm import LanguageModelTask, LanguageModelResponse
 
 
 class BatchManager(ABC):
+
+    def __init__(self):
+        self.task: LanguageModelTask | None = None
+
     @abstractmethod
     def start_task(self, query_id: str, query_list: List[str], temperature: float) -> LanguageModelTask:
         """

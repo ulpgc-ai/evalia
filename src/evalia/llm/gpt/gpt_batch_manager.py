@@ -35,8 +35,9 @@ class GPTBatchManager(GPTManager, BatchManager):
         logger.info(f"GPTBatchManager started. Model: {self.model}")
 
     def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
-        task = self.start_task(query_id, query_list, temperature)
-        return self.get_response(task)
+        if self.task is None:
+            self.task = self.start_task(query_id, query_list, temperature)
+        return self.get_response(self.task)
 
     def start_task(self, query_id: str, query_list: List[str], temperature: float) -> LanguageModelTask:
         # Prepare the JSONL file with the batch
