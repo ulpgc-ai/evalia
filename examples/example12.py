@@ -1,6 +1,6 @@
 '''
 EJEMPLO 1-2: Evaluación de oraciones compuestas
-Versión con tratamiento posterior de las respuestas de GPT
+Versión con tratamiento posterior de las respuestas del LLM
 '''
 
 # añadir la ruta actual para poder importar los módulos
@@ -10,6 +10,7 @@ import re
 
 # Evaluador automático
 from evalia.evaluators import Evaluator
+from evalia.llm.gpt import GPTSmartManager
 
 # Para leer prompts desde ficheros de texto
 from evalia.prompts import PromptFromTextFile
@@ -33,19 +34,10 @@ respuestas_estudiantes = {
     "calificación": [1, 1, 0, 0, 1]
 }
 
-PROMPT_FILE = "./examples/prompt_oraciones_compuestas.txt"
+PROMPT_FILE = "./prompt_oraciones_compuestas.txt"
 prompt = PromptFromTextFile(PROMPT_FILE)
 
-class EvaluadorOracionesCompuestas(Evaluator):
-
-    # constructor que pasa todos los argumentos a la clase base
-    def __init__(self,*args,**kwargs):
-        super().__init__(*args,**kwargs)
-
-    # GPT devuelve por cada respuesta un texto elaborado.
-    # El método postprocess_one_gpt_response() extrae una calificación
-    # numérica a partir del texto de GPT. 
-    def postprocess_one_gpt_response(self,text):
+def postprocess_one_gpt_response(text):
         """
         Calcula si una respuesta de GPT está OK o no:
         - al menos 2 verbos
@@ -65,17 +57,20 @@ class EvaluadorOracionesCompuestas(Evaluator):
             return None
         
 
-evaluador = EvaluadorOracionesCompuestas(
+evaluator = Evaluator(
     evaluator_id = "oraciones_compuestas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
-    prompt = prompt,
-    gpt_manager = MODELO_GPT,
-    query_batch_length=20
+    system_context = prompt,
+    managers = [
+        GPTSmartManager(model=MODELO_GPT)
+    ],
+    query_batch_length=20,
+    postprocess_one_llm_response = lambda text: postprocess_one_gpt_response(text),
 )
 
-df_result = evaluador.run()
+df_result = evaluator.evaluate_answers()
 
-evaluador.print_stats()
+evaluator.print_stats()
 
 # Guarda el resultado en un Excel
 EXCEL_FILE = os.path.join(OUTPUT_DIR, "oraciones_compuestas.xlsx")

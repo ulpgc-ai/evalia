@@ -27,7 +27,7 @@ class Evaluator:
                   query_batch_length: int = 20,
                   evaluated_answer_extractor: Type[EvaluatedAnswer] = EvaluatedAnswerOneLine,
                   temperature: float = 0.0,
-                  postprocess_one_llm_response: Callable[[str], str] = lambda text: text,
+                  postprocess_one_llm_response: Callable[[str], str | int] = lambda text: text,
                   persistent: bool = False
                   ):
         """
