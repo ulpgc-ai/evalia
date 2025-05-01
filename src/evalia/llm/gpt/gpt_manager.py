@@ -5,7 +5,7 @@ from typing import List
 
 from openai import OpenAI
 
-from evalia.llm import LanguageModelManager, LanguageModelResponse
+from evalia.llm import LanguageModelManager, LanguageModelResponse, LanguageModelTask
 
 
 class GPTManager(LanguageModelManager):
@@ -19,13 +19,18 @@ class GPTManager(LanguageModelManager):
         super().__init__(model)
         self.client = self.initialize_client()
 
+    @abstractmethod
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
+                   temperature: float = 0.0) -> LanguageModelTask:
+        pass
+
+    @abstractmethod
+    def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
+        pass
+
     @staticmethod
     def initialize_client():
         return OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
-    @abstractmethod
-    def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
-        pass
 
     def get_llm_name(self) -> str:
         return "GPT"

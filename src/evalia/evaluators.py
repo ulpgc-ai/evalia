@@ -139,6 +139,15 @@ class Evaluator:
             pickle.dump(self,f)
         logger.debug(f'"{self.evaluator_id}" saved to file "{filename}"')
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['postprocess_one_gpt_response'] = None
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.postprocess_one_gpt_response = lambda x: x
+
     @classmethod
     def load_or_create(cls, evaluator_id, create_func) -> Self:
         evaluator = cls.load_from_file(evaluator_id)
@@ -204,11 +213,15 @@ class Evaluator:
         df = self.sample_answers.copy()
         for manager in self.managers:
             system_context, initial_prompt = self.build_prompt_preamble()
-            llm_responses = manager.generate_text(query_id = self.evaluator_id,
+            first_time_executed: bool = manager.task is None
+            task = manager.start_task(query_id = self.evaluator_id,
                                                   initial_prompt = initial_prompt,
                                                   query_list= self.build_llm_queries(),
                                                   system_context = system_context,
                                                   temperature = self.temperature)
+            if first_time_executed:
+                self._persist_evaluator()
+            llm_responses = manager.get_response(task, timeout=0, retry=3)
             self.save_llm_responses(llm_responses, manager.get_llm_name())
             text_messages = [x.response for x in llm_responses]
 

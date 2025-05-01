@@ -5,7 +5,7 @@ from typing import List
 from google import genai
 from google.genai import types
 
-from evalia.llm import LanguageModelManager, LanguageModelResponse
+from evalia.llm import LanguageModelManager, LanguageModelResponse, LanguageModelTask
 
 
 class GeminiManager(LanguageModelManager):
@@ -18,9 +18,10 @@ class GeminiManager(LanguageModelManager):
     def initialize_client():
         return genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
-    def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
-        if self.responses:
-            return self.responses
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
+                   temperature: float = 0.0) -> LanguageModelTask:
+        if self.task:
+            return self.task
         responses = []
         for prompt in query_list:
             gemini_response = self.client.models.generate_content(
@@ -36,8 +37,11 @@ class GeminiManager(LanguageModelManager):
                     output_tokens=len(gemini_response.text.split())
                 )
             )
-        self.responses = responses
-        return responses
+        self.task = LanguageModelTask(id=query_id, responses=responses)
+        return self.task
+
+    def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
+        return task.responses
 
     def get_llm_name(self) -> str:
         return "Gemini"

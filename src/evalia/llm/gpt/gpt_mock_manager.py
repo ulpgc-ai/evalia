@@ -1,6 +1,6 @@
 from typing import List
 
-from evalia.llm import LanguageModelResponse
+from evalia.llm import LanguageModelResponse, LanguageModelTask
 from evalia.llm.gpt import GPTManager
 from evalia.logs import get_logger
 
@@ -15,8 +15,9 @@ class GPTMockManager(GPTManager):
     def __init__(self):
         super().__init__(model="mock")
 
-    def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
-        return [
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
+                   temperature: float = 0.0) -> LanguageModelTask:
+        responses = [
             LanguageModelResponse(
                 response=f"Mock response for query: {query}",
                 elapsed_time=1,
@@ -25,3 +26,8 @@ class GPTMockManager(GPTManager):
             )
             for query in query_list
         ]
+        self.task = LanguageModelTask(id=query_id, responses=responses)
+        return self.task
+
+    def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
+        return task.responses

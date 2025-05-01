@@ -34,16 +34,11 @@ class GPTBatchManager(GPTManager, BatchManager):
         logger.info("-----------------------------------")
         logger.info(f"GPTBatchManager started. Model: {self.model}")
 
-    def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
-        if self.task is None:
-            self.task = self.start_task(query_id, query_list, temperature)
-        return self.get_response(self.task)
-
-    def start_task(self, query_id: str, query_list: List[str], temperature: float) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> LanguageModelTask:
+        if self.task is not None:
+            return self.task
         # Prepare the JSONL file with the batch
-        batch_jsonl_file = self._build_jsonl_file(
-            query_id, query_list, temperature
-            )
+        batch_jsonl_file = self._build_jsonl_file(query_id, initial_prompt, query_list, system_context, temperature)
 
         # Upload the file to OpenAI file storage
         with open(batch_jsonl_file, 'rb') as f:
@@ -68,10 +63,11 @@ class GPTBatchManager(GPTManager, BatchManager):
         logger.info(f'Batch task created. Internal ID: "{query_id}". OpenAI ID: {batch.id}')
         logger.info(f'Batch ID "{query_id}". queries={len(query_list)} temperature={temperature}')
 
+        self.task = LanguageModelTask(batch.id)
         # return the task
         return LanguageModelTask(batch.id)
 
-    def _build_jsonl_file(self,query_id, query_list, temperature) -> str:
+    def _build_jsonl_file(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> str:
             """
             Build the JSONL file for the batch task.
             :param query_id: the ID of the query
@@ -99,7 +95,7 @@ class GPTBatchManager(GPTManager, BatchManager):
                         custom_id=query_counter,
                         model=self.model,
                         temperature=temperature,
-                        messages=json.dumps(query)
+                        messages=json.dumps(GPTManager.convert_to_gpt_messages(query, initial_prompt, system_context))
                     )
                     f.write(json_line)
                     f.write("\n")

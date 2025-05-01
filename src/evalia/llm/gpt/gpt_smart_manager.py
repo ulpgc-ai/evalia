@@ -12,7 +12,7 @@ from openai.types.chat import ChatCompletionDeveloperMessageParam, ChatCompletio
     ChatCompletionFunctionMessageParam
 from tiktoken import Encoding
 
-from evalia.llm import SmartManager, LanguageModelResponse
+from evalia.llm import SmartManager, LanguageModelResponse, LanguageModelTask
 from evalia.llm.gpt import GPTManager
 from src.evalia.logs import get_logger
 
@@ -199,9 +199,9 @@ class GPTSmartManager(GPTManager, SmartManager):
         logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
-    def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
-        if self.responses:
-            return self.responses
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> LanguageModelTask:
+        if self.task:
+            return self.task
         responses: List[LanguageModelResponse] = []
         for prompt in query_list:
             response = self.query(GPTManager.convert_to_gpt_messages(prompt, initial_prompt, system_context), temperature)
@@ -211,8 +211,11 @@ class GPTSmartManager(GPTManager, SmartManager):
                                                    output_tokens=response[1]["output_tokens"]
                                                    )
                              )
-        self.responses = responses
-        return responses
+        self.task = LanguageModelTask(query_id, responses)
+        return self.task
+
+    def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
+        return task.responses
 
     def _initialize_encoding(self) -> Encoding:
         if self.model.startswith("gpt-4"):
