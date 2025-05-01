@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from evalia.llm import LanguageModelResponse
+from evalia.llm import LanguageModelResponse, LanguageModelTask
 
 
 class LanguageModelManager(ABC):
@@ -9,10 +9,9 @@ class LanguageModelManager(ABC):
 
     def __init__(self, model: str):
         self.model = model
-        self.responses: List[LanguageModelResponse] = []
 
     @abstractmethod
-    def generate_text(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> List[LanguageModelResponse]:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> LanguageModelTask:
         """
         Generate text using the language model.
         :param query_id: the ID of the query (normally the evaluator's ID)
@@ -21,6 +20,18 @@ class LanguageModelManager(ABC):
         :param system_context: instructional context to be included in the message sequence
         :param temperature: temperature for the model
         :return: a list of LanguageModelResponse objects containing the model's responses and stats
+        """
+        pass
+
+
+    @abstractmethod
+    def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
+        """
+        Retrieves the response for a task.
+        :param task: LanguageModelTask object
+        :param timeout: maximum wait time (seconds). If zero, waits indefinitely.
+        :param retry: wait time between attempts (seconds). If zero, it only tries once.
+        :return: List of LanguageModelResponse objects
         """
         pass
 
