@@ -1,34 +1,7 @@
-"""
-class Evaluator
----------------
-Clase para procesar un ítem típico y proporcionar una evaluación.
-Esta clase sirve para la mayoría de los prompts. Tiene un par de métodos
-para tratar las respuestas antes y después de ser procesados por GPT:
-
-- build_prompt_preamble(): produce un JSON con la conversación inicial que se
-  repite en todas las interacciones con GPT.
-- build_gpt_queries(): convierte la muestra en una colección de textos para el GPT.
-- evaluate_answers(): transforma las respuestas de cada LLM en un DataFrame listo para explotar.
-- get_stats(): devuelve estadísticas de la interacción con GPT.
-
-Estos métodos se orquestan en el siguiente método plantilla:
-
-- run(): ejecuta todos los pasos anteriores. Devuelve las respuestas, un DataFrame y
-  el tiempo consumido
-
-- preprocess_one_answer(text) -> devuelve un texto listo para GPT
-- postprocess_one_gpt_response(text) -> nuevo texto listo para el DataFrame de respuesta
-
-Por defecto, estos métodos no transforman nada. 
-Para ítems más complicados o con particularidades, se pueden ir especializando
-estos métodos.
-
-"""
-
+from dataclasses import asdict
 from typing import Type, List, Self, Callable
 import pandas as pd
 import os
-import re
 import json
 import pickle
 
@@ -38,53 +11,51 @@ from evalia.llm import LanguageModelManager, LanguageModelResponse
 from evalia.api_response import APIResponse, APIResponseOneLine
 from evalia.config import cache_dir
 
-# Columnas que añade el evaluador automático al DataFrame de respuestas
+# Columns added by the automatic evaluator to the response DataFrame
 COLNAME_AI_GRADES = "evaluación "
 COLNAME_AI_FULL_EVALUATIONS = "respuesta completa "
 
-# Logging
 logger = get_logger(__name__)
 class Evaluator:
     def __init__ (self,
-                  evaluator_id='',
-                  managers: List[LanguageModelManager] = [],
+                  evaluator_id: str = '',
+                  managers: List[LanguageModelManager] = None,
                   student_responses: pd.DataFrame = None,
                   responses_column: int | str = 0,
-                  prompt: PromptSource = None,
-                  sample_selector = None,
-                  query_batch_length=20,
-                  gpt_response_class: Type[APIResponse] = APIResponseOneLine,
+                  system_context: PromptSource = None,
+                  sample_selector: int | slice | list | Callable = None,
+                  query_batch_length: int = 20,
+                  api_response_class: Type[APIResponse] = APIResponseOneLine,
                   temperature: float = 0.0,
-                  postprocess_one_gpt_response: Callable[[str], str] = lambda text: text,
+                  postprocess_one_llm_response: Callable[[str], str] = lambda text: text,
                   persistent: bool = False
                   ):
-        '''
-        Args:
-
-        - evaluator_id: identificador del evaluador automático. Normalmente será una string.
-        - student_responses: un DataFrame con al menos una columna con las respuestas de los estudiantes.
-        - responses_column: índice de la columna de respuestas en el DataFrame.
-          Puede ser un entero o una string. Por defecto es la primera columna del DataFrame.
-        - sample_selector: el rango de respuestas que se seleccionarán del DataFrame. Puede ser
-          un slice (ej. slice(0,15)), una lista de índices (ej. [1,7,99]), un entero N que servirá para
-          tomar una muestra aleatoria de N respuestas, o un objeto Callable
-          (ej. una expresión lambda). Si se deja a None, se seleccionan todas las respuestas.
-        - query_batch_length: número de respuestas que se empaquetarán en cada consulta a GPT.
-          Vale cualquier valor entero de 1 en adelante.
-        - gpt_response_class: modalidad de respuesta de GPT (una línea o varias líneas).
-        '''
+        """
+        Constructor of the Evaluator class.
+        :param evaluator_id: the identifier of the evaluator.
+        :param managers: the list of managers to use for the evaluation.
+        :param student_responses: the DataFrame with the student responses. At least one column with the student responses is required.
+        :param responses_column: the index of the column with the student responses in the DataFrame. It can be an integer or a string. By default, it is the first column of the DataFrame.
+        :param system_context: context for the LLM. Normally containing instructions for the LLM.
+        :param sample_selector: the range of responses to be selected from the DataFrame. It can be a slice (e.g. slice(0,15)), a list of indices (e.g. [1,7,99]),
+        an integer N that will be used to take a random sample of N responses, or a Callable object (e.g. a lambda expression). If set to None, all responses are selected.
+        :param query_batch_length: the number of responses that will be packed in each query to each LLM. Any integer value greater than 0 is valid.
+        :param api_response_class: the modality of the response from the LLM (one line or multiple lines).
+        :param temperature: the temperature to use for each LLM. A value of 0.0 means deterministic responses.
+        :param postprocess_one_llm_response: a function to postprocess the response from the LLM. It should take a string as input and return a string as output.
+        :param persistent: if True, the evaluator will be saved to a file after executing the tasks, and can be loaded in a subsequent execution.
+        """
         if persistent:
             loaded_evaluator = self.load_from_file(evaluator_id)
             if loaded_evaluator:
                 self.__dict__.update(loaded_evaluator.__dict__)
                 return
-        self.managers: List[LanguageModelManager] = managers
+        self.managers: List[LanguageModelManager] = managers if managers is not None else []
 
-        # Set other attributes
         self.evaluator_id = evaluator_id
         self.student_responses = student_responses
         self.responses_column = responses_column
-        self.prompt = prompt
+        self.prompt = system_context
         self.sample_selector = sample_selector
         if self.sample_selector is None:
             self.sample_answers = self.student_responses
@@ -100,15 +71,10 @@ class Evaluator:
         else:
             raise TypeError("Tipo de selector no soportado.")
         self.query_batch_length = query_batch_length
-        self.gpt_response_class = gpt_response_class
+        self.api_response_class = api_response_class
         self.temperature = temperature
-        self.postprocess_one_gpt_response = postprocess_one_gpt_response
+        self.postprocess_one_llm_response = postprocess_one_llm_response
         self.persistent = persistent
-
-        # Reset execution state variables
-        self.gpt_responses = None
-        self.stats = None
-        self.result = None
 
         logger.info(f'"{self.evaluator_id}" created')
 
@@ -116,16 +82,17 @@ class Evaluator:
         self.managers.append(manager)
         return self
 
-    # Load a serialized evaluator from a pickle file
-    # so you can continue the evaluation process.
-    # The object was serialized after executing send_gpt_queries()
     @classmethod
     def pickle_filename(cls, evaluator_id):
         return os.path.join(cache_dir(), evaluator_id + ".pkl")
 
     @classmethod
-    def load_from_file(cls, evaluator_id):
-        '''Load a serialized evaluator from a pickle file'''
+    def load_from_file(cls, evaluator_id: str) -> Self | None:
+        """
+        Load a serialized evaluator from a pickle file
+        :param evaluator_id: The ID of the evaluator to load
+        :return: The loaded evaluator or None if the file does not exist
+        """
         filename = cls.pickle_filename(evaluator_id)
         # if filename exists, load the evaluator from the pickle
         if os.path.exists(filename):
@@ -136,7 +103,6 @@ class Evaluator:
             evaluator = None
         return evaluator
 
-    # Internal function called in send_gpt_queries()
     def _persist_evaluator(self):
         filename = self.pickle_filename(self.evaluator_id)
         with open(filename,"wb") as f:
@@ -145,22 +111,15 @@ class Evaluator:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state['postprocess_one_gpt_response'] = None
+        state['postprocess_one_llm_response'] = None
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.postprocess_one_gpt_response = lambda x: x
+        self.postprocess_one_llm_response = lambda x: x
 
     def build_prompt_preamble(self):
         return self.prompt.get_prompt()
-
-    def preprocess_one_answer(self,text):
-        '''(override this method as needed)
-        transform one student answer from the dataframe
-        representation into a text to be delivered to GPT
-        '''
-        return text
 
     def build_llm_queries(self):
         if isinstance(self.responses_column, int):
@@ -186,27 +145,25 @@ class Evaluator:
         return batches
 
     def get_stats(self):
-        return self.stats
+        pass
 
     def save_llm_responses(self, llm_responses: List[LanguageModelResponse], llm_name: str):
         try:
             filename = os.path.join(cache_dir(), self.evaluator_id + f"_${llm_name}_responses.json")
-            dictlist = [x.dict() for x in llm_responses]
+            json_llm_responses = [asdict(x) for x in llm_responses]
             with open(filename,"w") as f:
-                json.dump(dictlist,f,indent=2)
-        except:
-            pass
+                json.dump(json_llm_responses,f,indent=2)
+        except Exception as e:
+            logger.error(f"Error saving LLM responses: {e}")
+            raise
 
     def evaluate_answers(self) -> pd.DataFrame:
-        '''
-        Recupera la respuesta del LLM, la procesa y
-        extrae las evaluaciones correspondientes a cada respuesta
-        de la muestra evaluada.
-        Devuelve un DataFrame que es el mismo de la muestra,
-        añadiendo dos columnas al final:
-        - una columna con la calificación
-        - una columna con la descripción de la evaluación
-        '''
+        """
+        Evaluates the student responses using each LLM manager.
+        For each manager, it builds the prompt and sends the requests to the LLM.
+        The responses are processed and the evaluations are extracted.
+        :return: a DataFrame which is the same as the sample, but with two additional columns at the end: a column with the score and a column with the evaluation description.
+        """
         df = self.sample_answers.copy()
         for manager in self.managers:
             system_context, initial_prompt = self.build_prompt_preamble()
@@ -222,65 +179,33 @@ class Evaluator:
         for manager in self.managers:
             llm_responses = manager.get_response(manager.task, timeout=0, retry=3)
             self.save_llm_responses(llm_responses, manager.get_llm_name())
-            text_messages = [x.response for x in llm_responses]
+            self._add_evaluation_columns_to_dataframe(df, llm_responses, manager.get_llm_name())
 
-            # me obliga a usar la clase dos veces: como objeto y también como argumento
-            extractor = self.gpt_response_class
-            gpt_responses = extractor.extract_responses(extractor, text_messages)
-
-            # a partir de gpt_lines, obtener listas indexadas de respuestas y evaluaciones
-            get_score = lambda x: self.postprocess_one_gpt_response(x.get_assessment())
-            indexed_assessments = { x.get_index():get_score(x) for x in gpt_responses }
-            indexed_responses = { x.get_index():x.get_full_response() for x in gpt_responses }
-            # añadir columnas al dataframe, vinculadas por el índice
-            # NOTA: puede haber índices faltantes por errores en la respuesta de GPT
-            # por eso hay que usar .loc e .index.map
-            df.loc[:,COLNAME_AI_GRADES + manager.get_llm_name()] = df.index.map(indexed_assessments)
-            df.loc[:,COLNAME_AI_FULL_EVALUATIONS + manager.get_llm_name()] = df.index.map(indexed_responses)
-
-        self.result = df
         logger.info(f'"{self.evaluator_id}" run successfully')
         return df
 
-    def rerun_gpt_responses (self,gpt_responses_file):
-        '''
-        Vuelve a procesar las respuestas de GPT recibidas en una 
-        anterior ejecución
-        '''
-        with open(gpt_responses_file,"r") as f:
-            gpt_responses = json.load(f)
-        self.gpt_responses = gpt_responses
-        df_result = self.evaluate_answers()
-        return df_result
+    def _add_evaluation_columns_to_dataframe(self, df: pd.DataFrame, llm_responses: List[LanguageModelResponse], manager_name: str):
+        text_messages = [x.response for x in llm_responses]
+        responses = self.api_response_class.extract_responses(self.api_response_class.extract_responses, text_messages)
+        get_score = lambda x: self.postprocess_one_llm_response(x.get_assessment())
+        indexed_assessments = {x.get_index(): get_score(x) for x in responses}
+        indexed_responses = {x.get_index(): x.get_full_response() for x in responses}
+        df.loc[:, COLNAME_AI_GRADES + manager_name] = df.index.map(indexed_assessments)
+        df.loc[:, COLNAME_AI_FULL_EVALUATIONS + manager_name] = df.index.map(indexed_responses)
 
 
-def extract_indicators(gpt_text_answer):
-    '''
-    Extrae indicadores de una respuesta de GPT
-    Los indicadores vendrán como parejas indicador_alfanumérico.valor_numérico,
-    por ejemplo: "a.1 b.2 c.3 d.4 e.5 f.6".
-    Ojo: normalizamos indicadores a minúsculas.
-    Retorna un dict con los indicadores y sus valores, ej. {'a':1,'b':2,...}
-    '''
-    try:
-        matches = re.findall(r'([a-z0-9]+\.\d+)',str.lower(gpt_text_answer))
-        pairs = [ m.split('.') for m in matches ]
-        indicators = { k:int(v) for k,v in pairs }
-    except:
-        indicators = {}
-    return indicators
-
-
-def save_excel(df, ITEM, output_dir = None):
-    '''
-    Guarda un DataFrame (resultado) en un Excel
-    con el mismo nombre que el ítem evaluado.
-    El directorio de salida por defecto es el CWD.
-    '''
+def save_excel(df: pd.DataFrame, file_name: str, output_dir: str | None = None):
+    """
+    Saves a DataFrame to an Excel file with the same name as the evaluated item.
+    :param df: the DataFrame to save
+    :param file_name: the name of the file (without extension)
+    :param output_dir: the directory to save the file. If None, it will be saved in the current working directory.
+    :return:
+    """
     if output_dir is None:
-        base_path = ITEM
+        base_path = file_name
     else:
-        base_path = os.path.join(output_dir,ITEM)
+        base_path = os.path.join(output_dir, file_name)
     extension = ".xlsx"
     counter = 0
     while True:
@@ -292,24 +217,3 @@ def save_excel(df, ITEM, output_dir = None):
         df.to_excel(pathname)
         break
       counter += 1
-
-def simple_report(item : Evaluator,
-                  gpt_response, df_result, elapsed_time):
-    print(f"elapsed time (secs): {elapsed_time}")
-    print("tokens spent: ")
-    print(gpt_response["usage"])
-
-    print("Answer: ")
-    gpt_text_answer : str = gpt_response["choices"][0]["message"]["content"]
-    print(gpt_text_answer)
-
-    save_excel(df_result,item.evaluator_id)
-
-def save_result(eva : Evaluator):
-    '''
-    Imprime las estadísticas de la última evaluación
-    y genera un archivo Excel con los resultados
-    '''
-    stats = eva.get_stats()
-    print(stats)
-    save_excel(eva.result,eva.evaluator_id)

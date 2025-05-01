@@ -52,7 +52,7 @@ respuestas_estudiantes = {
 evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
-    prompt = PromptFromString(PROMPT),
+    system_context= PromptFromString(PROMPT),
     query_batch_length=20 # envía a GPT las respuestas en lotes de 20
 )
 evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini"))

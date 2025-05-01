@@ -62,23 +62,23 @@ Tu calificación debe venir en este formato: <número de respuesta>. <calificaci
 respuestas_estudiantes = {
     "respuesta": [
         "Madrid, París, Berlín, Roma, Lisboa",
-        "Madriz, Paris, Verlin, Rroma, Lisbona", # con faltas de ortografía
+        "Madriz, Paris, Verlin, Rroma, Lisbona",  # con faltas de ortografía
         "París, Londres",
         "Pekín, Tokio, París, Roma, Copenhague, Londres",
         "esto es una respuesta inválida",
         "Madrid, París, Berlín, Roma, Lisboa, Londres",
         "Barcelona, Londres, Rotterdam, Salzburgo"
-        ],
+    ],
     "calificación real": [1, 1, 0, 0, 0, 1, 0]
 }
 
 # El evaluador automático
 evaluador = Evaluator(
-    evaluator_id = "capitales europeas",
-    student_responses = pd.DataFrame(respuestas_estudiantes),
-    responses_column = "respuesta",
-    prompt = PromptFromString(mi_prompt),
-    gpt_manager = MODELO_GPT,
+    evaluator_id="capitales europeas",
+    student_responses=pd.DataFrame(respuestas_estudiantes),
+    responses_column="respuesta",
+    system_context=PromptFromString(mi_prompt),
+    gpt_manager=MODELO_GPT,
     query_batch_length=20
 )
 

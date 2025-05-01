@@ -60,10 +60,10 @@ evaluator_id = "capitales europeas"
 evaluator = Evaluator(
             evaluator_id = evaluator_id,
             student_responses = pd.DataFrame(respuestas_estudiantes),
-            prompt = PromptFromString(PROMPT),
-            gpt_response_class=APIResponseJSON,
+            system_context= PromptFromString(PROMPT),
+            api_response_class=APIResponseJSON,
             query_batch_length=20,
-            postprocess_one_gpt_response = lambda text: text[0],
+            postprocess_one_llm_response= lambda text: text[0],
             managers = [
                 GPTBatchManager(model=MODELO_GPT),
             ],

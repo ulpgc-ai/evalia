@@ -40,7 +40,7 @@ def new_evaluator():
     return Evaluator(
         evaluator_id = "capitales europeas",
         student_responses = pd.DataFrame(respuestas_estudiantes),
-        prompt = PromptFromString(PROMPT),
+        system_context= PromptFromString(PROMPT),
         query_batch_length=20
     ).add_manager(GPTMockManager())
 

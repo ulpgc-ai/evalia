@@ -55,8 +55,8 @@ respuestas_estudiantes = {
 evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
-    prompt = PromptFromString(PROMPT),
-    gpt_response_class=GPTResponseJSON,
+    system_context= PromptFromString(PROMPT),
+    api_response_class=GPTResponseJSON,
     gpt_manager = MODELO_GPT,
     query_batch_length=20
 )

@@ -1,3 +1,7 @@
+from dataclasses import dataclass
+
+
+@dataclass
 class LanguageModelResponse:
     def __init__(self, response: str, elapsed_time: float, input_tokens: int, output_tokens: int):
         self.response: str = response

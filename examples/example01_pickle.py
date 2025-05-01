@@ -53,7 +53,7 @@ if evaluador is None:
     evaluador = Evaluator(
         evaluator_id = "capitales europeas",
         student_responses = pd.DataFrame(respuestas_estudiantes),
-        prompt = PromptFromString(PROMPT),
+        system_context= PromptFromString(PROMPT),
         gpt_manager = MODELO_GPT,
         batch_api=True,
         query_batch_length=20 # envía a GPT las respuestas en lotes de 20

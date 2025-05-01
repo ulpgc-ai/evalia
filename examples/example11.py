@@ -38,7 +38,7 @@ prompt = PromptFromTextFile(PROMPT_FILE)
 evaluador = Evaluator(
     evaluator_id = "oraciones_compuestas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
-    prompt = prompt,
+    system_context= prompt,
     gpt_manager = MODELO_GPT,
     query_batch_length=20
 )

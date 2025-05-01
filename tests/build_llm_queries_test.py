@@ -23,7 +23,7 @@ test_item = Evaluator(
     evaluator_id="test evaluator", 
     student_responses=test_dataframe,
     sample_selector=SLICE_RANGE,
-    prompt=test_prompt,
+    system_context=test_prompt,
     query_batch_length=QUERY_BATCH_LENGTH
 )
 
