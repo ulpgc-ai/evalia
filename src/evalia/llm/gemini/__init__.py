@@ -1,1 +1,2 @@
 from .gemini_manager import GeminiManager
+from .gemini_basic_manager import GeminiBasicManager

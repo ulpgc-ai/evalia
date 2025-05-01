@@ -7,7 +7,7 @@ import os
 
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
-from evalia.llm.gemini import GeminiManager
+from evalia.llm.gemini import GeminiBasicManager
 from evalia.llm.gpt import GPTSmartManager
 
 # Para leer prompts desde cadenas de texto
@@ -53,10 +53,10 @@ evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
     system_context= PromptFromString(PROMPT),
-    query_batch_length=20 # envía a GPT las respuestas en lotes de 20
+    query_batch_length=20
 )
 evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini"))
-evaluador.add_manager(GeminiManager(model="gemini-2.0-flash"))
+evaluador.add_manager(GeminiBasicManager(model="gemini-2.0-flash"))
 
 # Ejecuta la evaluación y devuelve un dataframe con el resultado
 df_result = evaluador.evaluate_answers()
