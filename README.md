@@ -161,7 +161,7 @@ de respuesta.
 Una interfaz sencilla con la API de OpenAI, adaptada a nuestro sistema. 
 Implementa contención automática del tráfico con OpenAI,
 para evitar superar los límites de tokens por minuto y de peticiones por minuto.
-- __[gpt_responses.py](src/evalia/api_response.py)__. Clases para el tratamiento de las evaluaciones procedentes de GPT. Se definen tres clases concretas: `GPTResponseOneLine`, `GPTResponseMultiline` y `GPTResponseJSON`, según si las respuestas vienen en una línea, en bloques de texto o en una lista JSON.
+- __[gpt_responses.py](src/evalia/evaluated_answer.py)__. Clases para el tratamiento de las evaluaciones procedentes de GPT. Se definen tres clases concretas: `GPTResponseOneLine`, `GPTResponseMultiline` y `GPTResponseJSON`, según si las respuestas vienen en una línea, en bloques de texto o en una lista JSON.
 - __[prompts.py](src/evalia/prompts.py)__. Clases que producen instrucciones (_prompts_) a partir de distintas fuentes: fichero de texto plano, fichero JSON, etc.
 
 ## Arquitectura del software

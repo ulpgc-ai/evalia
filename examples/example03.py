@@ -11,7 +11,7 @@ Este ejemplo utiliza la API por lotes de OpenAI (Batch API).
 import pandas as pd
 import os
 
-from evalia.api_response import APIResponseJSON
+from evalia.evaluated_answer import EvaluatedAnswerJSON
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
 from evalia.llm.gpt import GPTBatchManager
@@ -61,7 +61,7 @@ evaluator = Evaluator(
             evaluator_id = evaluator_id,
             student_responses = pd.DataFrame(respuestas_estudiantes),
             system_context= PromptFromString(PROMPT),
-            api_response_class=APIResponseJSON,
+            evaluated_answer_extractor=EvaluatedAnswerJSON,
             query_batch_length=20,
             postprocess_one_llm_response= lambda text: text[0],
             managers = [

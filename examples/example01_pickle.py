@@ -7,6 +7,7 @@ import os
 
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
+from evalia.llm.gpt import GPTBatchManager
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompts import PromptFromString
@@ -46,28 +47,25 @@ respuestas_estudiantes = {
     "calificación real": [1, 1, 0, 0, 0, 1, 0]
 }
 
-
-
-evaluador = Evaluator.load_from_file("capitales europeas")
-if evaluador is None:
-    evaluador = Evaluator(
+evaluator = Evaluator(
         evaluator_id = "capitales europeas",
         student_responses = pd.DataFrame(respuestas_estudiantes),
         system_context= PromptFromString(PROMPT),
-        gpt_manager = MODELO_GPT,
-        batch_api=True,
-        query_batch_length=20 # envía a GPT las respuestas en lotes de 20
-    )
-
+        managers = [
+            GPTBatchManager(model=MODELO_GPT)
+        ],
+        query_batch_length=20, # envía a GPT las respuestas en lotes de 20
+        persistent = True
+)
 
 # Ejecuta la evaluación y devuelve un dataframe con el resultado
-df_result = evaluador.run()
+df_result = evaluator.evaluate_answers()
 
 print("Resultados:")
 print(df_result)
 
 # Imprime estadísticas: tokens y tiempo consumido
-evaluador.print_stats()
+evaluator.print_stats()
 
 # Guarda el resultado en un Excel
 EXCEL_FILE = os.path.join(OUTPUT_DIR, "example01.xlsx")

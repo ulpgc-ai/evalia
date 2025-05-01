@@ -8,7 +8,7 @@ import pickle
 from evalia.logs import get_logger
 from evalia.prompts import PromptSource
 from evalia.llm import LanguageModelManager, LanguageModelResponse
-from evalia.api_response import APIResponse, APIResponseOneLine
+from evalia.evaluated_answer import EvaluatedAnswer, EvaluatedAnswerOneLine
 from evalia.config import cache_dir
 
 # Columns added by the automatic evaluator to the response DataFrame
@@ -25,7 +25,7 @@ class Evaluator:
                   system_context: PromptSource = None,
                   sample_selector: int | slice | list | Callable = None,
                   query_batch_length: int = 20,
-                  api_response_class: Type[APIResponse] = APIResponseOneLine,
+                  evaluated_answer_extractor: Type[EvaluatedAnswer] = EvaluatedAnswerOneLine,
                   temperature: float = 0.0,
                   postprocess_one_llm_response: Callable[[str], str] = lambda text: text,
                   persistent: bool = False
@@ -40,7 +40,7 @@ class Evaluator:
         :param sample_selector: the range of responses to be selected from the DataFrame. It can be a slice (e.g. slice(0,15)), a list of indices (e.g. [1,7,99]),
         an integer N that will be used to take a random sample of N responses, or a Callable object (e.g. a lambda expression). If set to None, all responses are selected.
         :param query_batch_length: the number of responses that will be packed in each query to each LLM. Any integer value greater than 0 is valid.
-        :param api_response_class: the modality of the response from the LLM (one line or multiple lines).
+        :param evaluated_answer_extractor: the modality of the response from the LLM (one line or multiple lines).
         :param temperature: the temperature to use for each LLM. A value of 0.0 means deterministic responses.
         :param postprocess_one_llm_response: a function to postprocess the response from the LLM. It should take a string as input and return a string as output.
         :param persistent: if True, the evaluator will be saved to a file after executing the tasks, and can be loaded in a subsequent execution.
@@ -71,7 +71,7 @@ class Evaluator:
         else:
             raise TypeError("Tipo de selector no soportado.")
         self.query_batch_length = query_batch_length
-        self.api_response_class = api_response_class
+        self.api_response_class = evaluated_answer_extractor
         self.temperature = temperature
         self.postprocess_one_llm_response = postprocess_one_llm_response
         self.persistent = persistent
@@ -191,7 +191,7 @@ class Evaluator:
 
     def _add_evaluation_columns_to_dataframe(self, df: pd.DataFrame, llm_responses: List[LanguageModelResponse], manager_name: str):
         text_messages = [x.response for x in llm_responses]
-        responses = self.api_response_class.extract_responses(self.api_response_class.extract_responses, text_messages)
+        responses = self.api_response_class.extract_evaluated_answers(text_messages)
         get_score = lambda x: self.postprocess_one_llm_response(x.get_assessment())
         indexed_assessments = {x.get_index(): get_score(x) for x in responses}
         indexed_responses = {x.get_index(): x.get_full_response() for x in responses}

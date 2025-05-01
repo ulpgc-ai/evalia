@@ -9,12 +9,13 @@ import os
 
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
+from evalia.llm.gpt import GPTSmartManager
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompts import PromptFromString
 
 # Para trabajar con respuestas en formato JSON
-from evalia.gpt_responses import GPTResponseJSON
+from evalia.evaluated_answer import EvaluatedAnswerJSON
 
 # Para configurar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4o-mini'
@@ -56,12 +57,14 @@ evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     student_responses = pd.DataFrame(respuestas_estudiantes),
     system_context= PromptFromString(PROMPT),
-    api_response_class=GPTResponseJSON,
-    gpt_manager = MODELO_GPT,
+    evaluated_answer_extractor=EvaluatedAnswerJSON,
+    managers = [
+      GPTSmartManager(model=MODELO_GPT)
+    ],
     query_batch_length=20
 )
 
-df_result = evaluador.run()
+df_result = evaluador.evaluate_answers()
 
 print("Resultados:")
 print(df_result)
