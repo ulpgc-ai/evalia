@@ -65,7 +65,7 @@ print("Resultados:")
 print(df_result)
 
 # Imprime estadísticas: tokens y tiempo consumido
-print(evaluador.get_stats())
+evaluador.print_stats()
 
 # Guarda el resultado en un Excel
 EXCEL_FILE = os.path.join(OUTPUT_DIR, "example01.xlsx")

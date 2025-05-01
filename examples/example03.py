@@ -73,7 +73,7 @@ df_result = evaluator.evaluate_answers()
 
 print("Resultados:")
 print(df_result)
-print(evaluator.get_stats())
+evaluator.print_stats()
 
 EXCEL_OUTPUT = os.path.join(OUTPUT_DIR, "example03.xlsx")
 df_result.to_excel(EXCEL_OUTPUT)

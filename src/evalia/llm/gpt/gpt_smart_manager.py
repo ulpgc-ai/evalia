@@ -267,7 +267,7 @@ class GPTSmartManager(GPTManager, SmartManager):
                 time.sleep(5)
 
         elapsed_time = round(time.time() - self.request_queue.queue[-1].time, 3)
-        print(f"Time: {elapsed_time} seconds")
+        logger.info(f"Time: {elapsed_time} seconds")
 
         self.request_queue.modify_last_request(chat_completion.usage.total_tokens)
         logger.info(f'"Tokens processed: {chat_completion.usage.total_tokens}')

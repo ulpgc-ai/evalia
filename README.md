@@ -92,7 +92,7 @@ print("Resultados:")
 print(df_result)
 
 # Imprime estadísticas: tokens y tiempo consumido
-print(evaluador.get_stats())
+print(evaluador.print_stats())
 ```
 
 ## Comentarios al ejemplo

@@ -75,7 +75,7 @@ evaluador = EvaluadorOracionesCompuestas(
 
 df_result = evaluador.run()
 
-print(evaluador.get_stats())
+evaluador.print_stats()
 
 # Guarda el resultado en un Excel
 EXCEL_FILE = os.path.join(OUTPUT_DIR, "oraciones_compuestas.xlsx")

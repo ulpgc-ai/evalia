@@ -144,8 +144,13 @@ class Evaluator:
 
         return batches
 
-    def get_stats(self):
-        pass
+    def print_stats(self):
+        for manager in self.managers:
+            print(f"Stats for {manager.get_llm_name()}:")
+            print(f"Input tokens: {sum(response.input_tokens for response in manager.task.responses)}")
+            print(f"Output tokens: {sum(response.output_tokens for response in manager.task.responses)}")
+            print(f"Elapsed time: {sum(response.elapsed_time for response in manager.task.responses)} seconds")
+            print("=============================================")
 
     def save_llm_responses(self, llm_responses: List[LanguageModelResponse], llm_name: str):
         try:
