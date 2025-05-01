@@ -38,9 +38,12 @@ class GeminiManager(LanguageModelManager):
                 )
             )
         self.task = LanguageModelTask(id=query_id, responses=responses)
+        self.responses = responses
         return self.task
 
     def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
+        if self.responses is not None:
+            return self.responses
         return task.responses
 
     def get_llm_name(self) -> str:

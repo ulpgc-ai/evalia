@@ -121,6 +121,8 @@ class GPTBatchManager(GPTManager, BatchManager):
     # TODO: ordenar las respuestas según "custom_id" y 
     # poner respuestas nulas en las omitidas
     def get_response(self, task: LanguageModelTask, timeout=0, retry=1) -> List[LanguageModelResponse]:
+        if self.responses is not None:
+            return self.responses
         start_time = time.time()
         batch_id = task.id
         batch_object = self.client.batches.retrieve(batch_id)
@@ -172,4 +174,5 @@ class GPTBatchManager(GPTManager, BatchManager):
                 input_tokens=r.usage.prompt_tokens,
                 output_tokens=r.usage.completion_tokens,
             ))
+        self.responses = lm_responses
         return lm_responses

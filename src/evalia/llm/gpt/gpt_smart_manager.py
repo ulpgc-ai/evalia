@@ -212,9 +212,12 @@ class GPTSmartManager(GPTManager, SmartManager):
                                                    )
                              )
         self.task = LanguageModelTask(query_id, responses)
+        self.responses = responses
         return self.task
 
     def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
+        if self.responses is not None:
+            return self.responses
         return task.responses
 
     def _initialize_encoding(self) -> Encoding:
