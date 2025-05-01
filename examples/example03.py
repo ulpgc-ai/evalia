@@ -11,14 +11,15 @@ Este ejemplo utiliza la API por lotes de OpenAI (Batch API).
 import pandas as pd
 import os
 
+from evalia.api_response import APIResponseJSON
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
+from evalia.llm.gpt import GPTBatchManager
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompts import PromptFromString
 
 # Para trabajar con respuestas en formato JSON
-from evalia.gpt_responses import GPTResponseJSON
 
 # Para configurar el modelo GPT que se va a usar
 MODELO_GPT = 'gpt-4o-mini'
@@ -55,43 +56,17 @@ respuestas_estudiantes = {
     "calificación real": [1, 1, 0, 0, 0, 1, 0]
 }
 
-
-# Definimos una nueva clase, ya que vamos a crear un método nuevo
-class Evaluador(Evaluator):
-    def __init__(self, id):
-        super().__init__(
-            evaluator_id = id,
+evaluator_id = "capitales europeas"
+evaluador = Evaluator.load_or_create(evaluator_id, lambda: Evaluator(
+            evaluator_id = evaluator_id,
             student_responses = pd.DataFrame(respuestas_estudiantes),
             prompt = PromptFromString(PROMPT),
-            gpt_response_class=GPTResponseJSON,
-            gpt_manager = MODELO_GPT,
-            batch_api=True,
-            query_batch_length=20
-        )
-
-    def postprocess_one_gpt_response(self, text):
-        '''Extrae la calificación numérica de la respuesta de GPT.
-        Lo que devuelve esta función es lo que irá
-        a la columna "Calificación GPT".
-        La respuesta de GPT es una lista: [ <calificación>, <'justificación'> ]
-        (ojo, el número de índice se suprime)
-        Es importante usar manejadores de excepciones para defenderse de
-        posibles errores de GPT.'''
-        try:
-            score = text[0]
-            return score
-        except:
-            return None
-
-# El decorador "persistent" guarda el estado del objeto en un archivo
-# y permite reanudar la ejecución en otro momento.
-# La reanudación se hace volviendo a ejecutar este mismo programa.
-@Evaluator.persistent
-def evaluador_persistente(id_evaluador):
-    return Evaluador(id_evaluador)
-
-evaluador = evaluador_persistente("capitales europeas")
-df_result = evaluador.run()
+            gpt_response_class=APIResponseJSON,
+            query_batch_length=20,
+            postprocess_one_gpt_response = lambda text: text[0]
+))
+evaluador.add_manager(GPTBatchManager(model=MODELO_GPT))
+df_result = evaluador.evaluate_answers()
 
 print("Resultados:")
 print(df_result)

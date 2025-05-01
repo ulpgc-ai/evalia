@@ -25,7 +25,7 @@ estos métodos.
 
 """
 
-from typing import Type, List
+from typing import Type, List, Self, Callable
 import pandas as pd
 import os
 import re
@@ -55,7 +55,8 @@ class Evaluator:
                   sample_selector = None,
                   query_batch_length=20,
                   gpt_response_class: Type[APIResponse] = APIResponseOneLine,
-                  temperature: float = 0.0
+                  temperature: float = 0.0,
+                  postprocess_one_gpt_response: Callable[[str], str] = lambda text: text
                   ):
         '''
         Args:
@@ -98,6 +99,7 @@ class Evaluator:
         self.query_batch_length = query_batch_length
         self.gpt_response_class = gpt_response_class
         self.temperature = temperature
+        self.postprocess_one_gpt_response = postprocess_one_gpt_response
 
         # Reset execution state variables
         self.gpt_responses = None
@@ -137,36 +139,12 @@ class Evaluator:
             pickle.dump(self,f)
         logger.debug(f'"{self.evaluator_id}" saved to file "{filename}"')
 
-
-    # Redefine serialization. GPTSmartManager cannot be serialized
-    # because it uses TikToken (a non-serializable module).
-    def __getstate__(self):
-        gpt_manager = self._gpt_manager
-        self._gpt_manager = gpt_manager.model
-        self.model = gpt_manager.model
-        self.batch_api = gpt_manager.batch_api
-        state = self.__dict__.copy()
-        self._gpt_manager = gpt_manager
-        return state
-
-    def __setstate__(self,state):
-        self.__dict__.update(state)
-        self.gpt_manager = state['_gpt_manager']
-        self.model = self.gpt_manager.model
-
-    # PERSISTENCE DECORATOR
     @classmethod
-    def persistent(cls,func):
-        '''Decorator that loads the evaluator from a pickle file if it exists'''
-        def f(item_id):
-            eva = Evaluator.load_from_file(item_id)
-            if eva is None:
-                return func(item_id)
-            else:
-                return eva
-        return f
-
-    ### --- end of persistence section
+    def load_or_create(cls, evaluator_id, create_func) -> Self:
+        evaluator = cls.load_from_file(evaluator_id)
+        if evaluator is None:
+            evaluator = create_func()
+        return evaluator
 
     def build_prompt_preamble(self):
         return self.prompt.get_prompt()
@@ -203,12 +181,6 @@ class Evaluator:
 
     def get_stats(self):
         return self.stats
-
-    def postprocess_one_gpt_response(self,text):
-        '''(override this method as needed)
-        transform a GPT response to an answer into a usable text
-        '''
-        return text
 
     def save_llm_responses(self, llm_responses: List[LanguageModelResponse], llm_name: str):
         try:
