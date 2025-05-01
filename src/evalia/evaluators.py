@@ -214,14 +214,16 @@ class Evaluator:
         for manager in self.managers:
             system_context, initial_prompt = self.build_prompt_preamble()
             first_time_executed: bool = manager.task is None
-            task = manager.start_task(query_id = self.evaluator_id,
+            manager.start_task(query_id = self.evaluator_id,
                                                   initial_prompt = initial_prompt,
                                                   query_list= self.build_llm_queries(),
                                                   system_context = system_context,
                                                   temperature = self.temperature)
             if first_time_executed:
                 self._persist_evaluator()
-            llm_responses = manager.get_response(task, timeout=0, retry=3)
+
+        for manager in self.managers:
+            llm_responses = manager.get_response(manager.task, timeout=0, retry=3)
             self.save_llm_responses(llm_responses, manager.get_llm_name())
             text_messages = [x.response for x in llm_responses]
 
