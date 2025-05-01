@@ -1,9 +1,11 @@
 import os
 import pickle
+import time
 from typing import List
 
 from google import genai
 from google.genai import types
+from google.genai.types import GenerateContentResponse
 
 from evalia.llm import LanguageModelManager, LanguageModelResponse, LanguageModelTask
 
@@ -24,17 +26,19 @@ class GeminiManager(LanguageModelManager):
             return self.task
         responses = []
         for prompt in query_list:
-            gemini_response = self.client.models.generate_content(
+            start_time = time.time()
+            gemini_response: GenerateContentResponse = self.client.models.generate_content(
                 model=self.model,
                 contents=initial_prompt + prompt,
                 config=types.GenerateContentConfig(system_instruction=system_context)
             )
+            end_time = time.time()
             responses.append(
                 LanguageModelResponse(
                     response=gemini_response.text,
-                    elapsed_time=0,
-                    input_tokens=len(prompt.split()),
-                    output_tokens=len(gemini_response.text.split())
+                    elapsed_time=round((end_time-start_time), 3),
+                    input_tokens=round(gemini_response.usage_metadata.prompt_token_count, 3),
+                    output_tokens=round(gemini_response.usage_metadata.candidates_token_count, 3)
                 )
             )
         self.task = LanguageModelTask(id=query_id, responses=responses)
