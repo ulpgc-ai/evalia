@@ -45,10 +45,9 @@ COLNAME_AI_FULL_EVALUATIONS = "respuesta completa "
 # Logging
 logger = get_logger(__name__)
 class Evaluator:
-    '''Clase base para la mayoría de los ítems'''
-
     def __init__ (self,
                   evaluator_id='',
+                  managers: List[LanguageModelManager] = [],
                   student_responses: pd.DataFrame = None,
                   responses_column: int | str = 0,
                   prompt: PromptSource = None,
@@ -56,7 +55,8 @@ class Evaluator:
                   query_batch_length=20,
                   gpt_response_class: Type[APIResponse] = APIResponseOneLine,
                   temperature: float = 0.0,
-                  postprocess_one_gpt_response: Callable[[str], str] = lambda text: text
+                  postprocess_one_gpt_response: Callable[[str], str] = lambda text: text,
+                  persistent: bool = False
                   ):
         '''
         Args:
@@ -73,9 +73,12 @@ class Evaluator:
           Vale cualquier valor entero de 1 en adelante.
         - gpt_response_class: modalidad de respuesta de GPT (una línea o varias líneas).
         '''
-        super().__init__()
-
-        self.managers: List[LanguageModelManager] = []
+        if persistent:
+            loaded_evaluator = self.load_from_file(evaluator_id)
+            if loaded_evaluator:
+                self.__dict__.update(loaded_evaluator.__dict__)
+                return
+        self.managers: List[LanguageModelManager] = managers
 
         # Set other attributes
         self.evaluator_id = evaluator_id
@@ -100,6 +103,7 @@ class Evaluator:
         self.gpt_response_class = gpt_response_class
         self.temperature = temperature
         self.postprocess_one_gpt_response = postprocess_one_gpt_response
+        self.persistent = persistent
 
         # Reset execution state variables
         self.gpt_responses = None
@@ -147,13 +151,6 @@ class Evaluator:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self.postprocess_one_gpt_response = lambda x: x
-
-    @classmethod
-    def load_or_create(cls, evaluator_id, create_func) -> Self:
-        evaluator = cls.load_from_file(evaluator_id)
-        if evaluator is None:
-            evaluator = create_func()
-        return evaluator
 
     def build_prompt_preamble(self):
         return self.prompt.get_prompt()
@@ -219,7 +216,7 @@ class Evaluator:
                                                   query_list= self.build_llm_queries(),
                                                   system_context = system_context,
                                                   temperature = self.temperature)
-            if first_time_executed:
+            if first_time_executed and self.persistent:
                 self._persist_evaluator()
 
         for manager in self.managers:

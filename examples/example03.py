@@ -57,20 +57,23 @@ respuestas_estudiantes = {
 }
 
 evaluator_id = "capitales europeas"
-evaluador = Evaluator.load_or_create(evaluator_id, lambda: Evaluator(
+evaluator = Evaluator(
             evaluator_id = evaluator_id,
             student_responses = pd.DataFrame(respuestas_estudiantes),
             prompt = PromptFromString(PROMPT),
             gpt_response_class=APIResponseJSON,
             query_batch_length=20,
-            postprocess_one_gpt_response = lambda text: text[0]
-))
-evaluador.add_manager(GPTBatchManager(model=MODELO_GPT))
-df_result = evaluador.evaluate_answers()
+            postprocess_one_gpt_response = lambda text: text[0],
+            managers = [
+                GPTBatchManager(model=MODELO_GPT),
+            ],
+            persistent = True,
+)
+df_result = evaluator.evaluate_answers()
 
 print("Resultados:")
 print(df_result)
-print(evaluador.get_stats())
+print(evaluator.get_stats())
 
 EXCEL_OUTPUT = os.path.join(OUTPUT_DIR, "example03.xlsx")
 df_result.to_excel(EXCEL_OUTPUT)
