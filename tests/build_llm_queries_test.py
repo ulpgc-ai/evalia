@@ -21,7 +21,7 @@ QUERY_BATCH_LENGTH = 7
 
 test_item = Evaluator(
     evaluator_id="test evaluator", 
-    student_responses=test_dataframe,
+    student_answers=test_dataframe,
     sample_selector=SLICE_RANGE,
     system_context=test_prompt,
     query_batch_length=QUERY_BATCH_LENGTH

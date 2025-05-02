@@ -75,7 +75,7 @@ respuestas_estudiantes = {
 # El evaluador automático
 evaluador = Evaluator(
     evaluator_id="capitales europeas",
-    student_responses=pd.DataFrame(respuestas_estudiantes),
+    student_answers=pd.DataFrame(respuestas_estudiantes),
     responses_column="respuesta",
     system_context=PromptFromString(mi_prompt),
     gpt_manager=MODELO_GPT,
