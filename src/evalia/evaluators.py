@@ -172,13 +172,12 @@ class Evaluator:
         df = self.sample_answers.copy()
         for manager in self.managers:
             system_context, initial_prompt = self.build_prompt_preamble()
-            first_time_executed: bool = manager.task is None
             manager.start_task(query_id = self.evaluator_id,
                                                   initial_prompt = initial_prompt,
                                                   query_list= self.build_llm_queries(),
                                                   system_context = system_context,
                                                   temperature = self.temperature)
-            if first_time_executed and self.persistent:
+            if self.persistent:
                 self._persist_evaluator()
 
         for manager in self.managers:
