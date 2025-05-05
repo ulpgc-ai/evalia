@@ -15,11 +15,17 @@ El archivo [pyproject.toml](pyproject.toml) indica las dependencias de este mód
 
 ### Variables de entorno
 
+#### OpenAI
 * `OPENAI_API_KEY`. Para poder utilizar la API de OpenAI.
 * `OPENAI_TIER`. Opcional, para indicar en qué nivel de contrato está la cuenta de OpenAI. 
 Se usará para controlar los límites RPM y TPM de la interacción con GPT. 
 Si la variable no está definida, se usará "Tier 1".
 Otros valores pueden ser "Tier 2", "Tier 3", "Tier 4" y "Tier 5".
+
+#### Gemini
+* `GEMINI_API_KEY`. Para poder utilizar la API de Gemini (Google).
+* `GOOGLE_CLOUD_PROJECT`: Id del proyecto de Google Cloud, necesario para poder usar el procesamiento por lotes de Gemini.
+* 
 
 * `EVALIA_CACHE_DIR` Ruta de los archivos temporales de la aplicación (archivos _pickle_). Si se omite, se usa la ruta por defecto para los archivos de caché de "evalia".
 * `EVALIA_LOG_DIR` Ruta de los archivos de registro (_logs_) de la aplicación. Si se omite, se usa la ruta por defecto del sistema operativo para los _logs_ de "evalia".

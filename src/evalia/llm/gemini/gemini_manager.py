@@ -7,13 +7,17 @@ from evalia.llm import LanguageModelManager, LanguageModelResponse, LanguageMode
 
 class GeminiManager(LanguageModelManager):
 
-    def __init__(self, model):
+    def __init__(self, model, use_vertex: bool = False):
         super().__init__(model=model)
-        self.client = self.initialize_client()
+        self.use_vertex = use_vertex
+        self.client = self.initialize_client(use_vertex)
 
     @staticmethod
-    def initialize_client():
-        return genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
+    def initialize_client(use_vertex: bool = False):
+        if use_vertex:
+            return genai.Client(vertexai=use_vertex)
+        else:
+            return genai.Client(api_key=os.getenv('GEMINI_API_KEY'), vertexai=use_vertex)
 
     @abstractmethod
     def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
@@ -34,4 +38,4 @@ class GeminiManager(LanguageModelManager):
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.client = self.initialize_client()
+        self.client = self.initialize_client(self.use_vertex)
