@@ -7,6 +7,7 @@ import os
 
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
+from evalia.llm.claude import ClaudeBasicManager
 from evalia.llm.gemini import GeminiManager
 from evalia.llm.gpt import GPTSmartManager
 
@@ -57,6 +58,7 @@ evaluador = Evaluator(
 )
 evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini"))
 evaluador.add_manager(GeminiManager(model="gemini-2.0-flash"))
+evaluador.add_manager(ClaudeBasicManager(model="claude-3-5-sonnet-latest"))
 
 # Ejecuta la evaluación y devuelve un dataframe con el resultado
 df_result = evaluador.evaluate_answers()
