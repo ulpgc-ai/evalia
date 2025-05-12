@@ -21,13 +21,7 @@ class ClaudeManager(LanguageModelManager):
     def create_claude_input_message(role: Literal['user', 'assistant'], prompt: str) -> MessageParam:
         return {
             "role": role,
-            "content": [
-                {
-                    "type": "text",
-                    "text": prompt
-                }
-
-            ]
+            "content": prompt
         }
 
     def __getstate__(self):
