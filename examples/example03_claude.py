@@ -1,23 +1,12 @@
-'''
-EJEMPLO 1. Evaluar capitales europeas
-'''
-
-import pandas as pd
 import os
 
-# Clase para evaluador automático
-from evalia.evaluators import Evaluator
-from evalia.llm.gemini import GeminiBasicManager
-from evalia.llm.claude import ClaudeBasicManager
-from evalia.llm.gpt import GPTSmartManager
+import pandas as pd
 
-# Para leer prompts desde cadenas de texto
+from evalia import Evaluator
+from evalia.evaluated_answer import EvaluatedAnswerJSON
+from evalia.llm.claude.claude_batch_manager import ClaudeBatchManager
 from evalia.prompts import PromptFromString
 
-# Para configurar el modelo GPT que se va a usar
-MODELO_GPT = 'gpt-4o-mini'
-
-# Directorio de salida
 OUTPUT_DIR = "./output"
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
@@ -33,7 +22,8 @@ Tienes que calificar cada respuesta de la siguiente forma:
 1 = hay al menos cinco nombres y todos son capitales europeas.
 0 = cualquier otro caso.
 No importan las faltas de ortografía, por ejemplo considera correctas "Berlin" y "Verlin".
-Tu calificación debe venir en este formato: <número de respuesta>. <calificación>
+Tu calificación debe venir en este formato: [ <número de respuesta>, <calificación>, "<justificación de la calificación>" ]
+No añadas frases adicionales del estilo \"aquí tienes la respuesta\" o \"aquí tienes la evaluación\".
 '''
 
 respuestas_estudiantes = {
@@ -49,27 +39,24 @@ respuestas_estudiantes = {
     "calificación real": [1, 1, 0, 0, 0, 1, 0]
 }
 
-
-evaluador = Evaluator(
-    evaluator_id = "capitales europeas",
-    student_answers= pd.DataFrame(respuestas_estudiantes),
-    system_context= PromptFromString(PROMPT),
-    query_batch_length=20
+evaluator_id = "example03_claude"
+evaluator = Evaluator(
+            evaluator_id = evaluator_id,
+            student_answers= pd.DataFrame(respuestas_estudiantes),
+            system_context= PromptFromString(PROMPT),
+            evaluated_answer_extractor=EvaluatedAnswerJSON,
+            query_batch_length=20,
+            postprocess_one_llm_response= lambda text: text[0],
+            managers = [
+                ClaudeBatchManager(model="claude-3-5-haiku-latest"),
+            ],
+            persistent = True,
 )
-evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini"))
-evaluador.add_manager(GeminiBasicManager(model="gemini-2.0-flash"))
-evaluador.add_manager(ClaudeBasicManager(model="claude-3-5-sonnet-latest"))
-
-# Ejecuta la evaluación y devuelve un dataframe con el resultado
-df_result = evaluador.evaluate_answers()
+df_result = evaluator.evaluate_answers()
 
 print("Resultados:")
 print(df_result)
+evaluator.print_stats()
 
-# Imprime estadísticas: tokens y tiempo consumido
-evaluador.print_stats()
-
-# Guarda el resultado en un Excel
-EXCEL_FILE = os.path.join(OUTPUT_DIR, "example01.xlsx")
-df_result.to_excel(EXCEL_FILE)
-
+EXCEL_OUTPUT = os.path.join(OUTPUT_DIR, "example03.xlsx")
+df_result.to_excel(EXCEL_OUTPUT)

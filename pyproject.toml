@@ -14,7 +14,7 @@ readme = "README.md"
 # TODO: Add license file
 # license = { text = "MIT" }
 requires-python = ">=3.7"
-dependencies = [ "pandas", "openpyxl", "openai", "tiktoken", "platformdirs", "google-genai", "google-cloud-storage" ]
+dependencies = [ "pandas", "openpyxl", "openai", "tiktoken", "platformdirs", "google-genai", "google-cloud-storage", "anthropic" ]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
