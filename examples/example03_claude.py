@@ -23,6 +23,7 @@ Tienes que calificar cada respuesta de la siguiente forma:
 0 = cualquier otro caso.
 No importan las faltas de ortografía, por ejemplo considera correctas "Berlin" y "Verlin".
 Tu calificación debe venir en este formato: [ <número de respuesta>, <calificación>, "<justificación de la calificación>" ]
+No añadas frases adicionales del estilo \"aquí tienes la respuesta\" o \"aquí tienes la evaluación\".
 '''
 
 respuestas_estudiantes = {
