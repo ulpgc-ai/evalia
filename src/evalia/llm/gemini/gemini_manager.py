@@ -12,16 +12,15 @@ from evalia.llm import LanguageModelManager, LanguageModelResponse, LanguageMode
 
 class GeminiManager(LanguageModelManager):
 
-    def __init__(self, model):
-        super().__init__(model=model)
+    def __init__(self, model: str, temperature: float = 0.0):
+        super().__init__(model=model, temperature=temperature)
         self.client = self.initialize_client()
 
     @staticmethod
     def initialize_client():
         return genai.Client(api_key=os.getenv('GEMINI_API_KEY'))
 
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
-                   temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task:
             return self.task
         responses = []
@@ -30,7 +29,7 @@ class GeminiManager(LanguageModelManager):
             gemini_response: GenerateContentResponse = self.client.models.generate_content(
                 model=self.model,
                 contents=initial_prompt + prompt,
-                config=types.GenerateContentConfig(system_instruction=system_context)
+                config=types.GenerateContentConfig(system_instruction=system_context, temperature=self.temperature)
             )
             end_time = time.time()
             responses.append(

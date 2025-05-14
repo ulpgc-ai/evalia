@@ -28,17 +28,17 @@ class GPTBatchManager(GPTManager, BatchManager):
     Sends queries in batches for deferred response.
     """
 
-    def __init__(self,model=""):
-        super().__init__(model=model)
+    def __init__(self,model="", temperature: float = 0.0):
+        super().__init__(model=model, temperature=temperature)
         self.batch_api = True
         logger.info("-----------------------------------")
         logger.info(f"GPTBatchManager started. Model: {self.model}")
 
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task is not None:
             return self.task
         # Prepare the JSONL file with the batch
-        batch_jsonl_file = self._build_jsonl_file(query_id, initial_prompt, query_list, system_context, temperature)
+        batch_jsonl_file = self._build_jsonl_file(query_id, initial_prompt, query_list, system_context)
 
         # Upload the file to OpenAI file storage
         with open(batch_jsonl_file, 'rb') as f:
@@ -61,18 +61,17 @@ class GPTBatchManager(GPTManager, BatchManager):
         )
 
         logger.info(f'Batch task created. Internal ID: "{query_id}". OpenAI ID: {batch.id}')
-        logger.info(f'Batch ID "{query_id}". queries={len(query_list)} temperature={temperature}')
+        logger.info(f'Batch ID "{query_id}". queries={len(query_list)} temperature={self.temperature}')
 
         self.task = LanguageModelTask(batch.id)
         # return the task
         return LanguageModelTask(batch.id)
 
-    def _build_jsonl_file(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> str:
+    def _build_jsonl_file(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> str:
             """
             Build the JSONL file for the batch task.
             :param query_id: the ID of the query
             :param query_list: list of queries to process
-            :param temperature: temperature for the model
             :return: JSONL filename
             """
             assert len(query_list) <= MAX_REQUESTS_PER_BATCH, \
@@ -94,7 +93,7 @@ class GPTBatchManager(GPTManager, BatchManager):
                     json_line = JSONL_TEMPLATE.format(
                         custom_id=query_counter,
                         model=self.model,
-                        temperature=temperature,
+                        temperature=self.temperature,
                         messages=json.dumps(GPTManager.convert_to_gpt_messages(query, initial_prompt, system_context))
                     )
                     f.write(json_line)

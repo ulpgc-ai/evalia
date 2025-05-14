@@ -26,7 +26,6 @@ class Evaluator:
                   sample_selector: int | slice | list | Callable = None,
                   query_batch_length: int = 20,
                   evaluated_answer_extractor: Type[EvaluatedAnswer] = EvaluatedAnswerOneLine,
-                  temperature: float = 0.0,
                   postprocess_one_llm_response: Callable[[str], str | int] = lambda text: text,
                   persistent: bool = False
                   ):
@@ -41,7 +40,6 @@ class Evaluator:
         an integer N that will be used to take a random sample of N responses, or a Callable object (e.g. a lambda expression). If set to None, all responses are selected.
         :param query_batch_length: the number of responses that will be packed in each query to each LLM. Any integer value greater than 0 is valid.
         :param evaluated_answer_extractor: the modality of the response from the LLM (one line or multiple lines).
-        :param temperature: the temperature to use for each LLM. A value of 0.0 means deterministic responses.
         :param postprocess_one_llm_response: a function to postprocess the response from the LLM. It should take a string as input and return a string as output.
         :param persistent: if True, the evaluator will be saved to a file after executing the tasks, and can be loaded in a subsequent execution.
         """
@@ -72,7 +70,6 @@ class Evaluator:
             raise TypeError("Tipo de selector no soportado.")
         self.query_batch_length = query_batch_length
         self.api_response_class = evaluated_answer_extractor
-        self.temperature = temperature
         self.postprocess_one_llm_response = postprocess_one_llm_response
         self.persistent = persistent
 
@@ -175,8 +172,7 @@ class Evaluator:
             manager.start_task(query_id = self.evaluator_id,
                                                   initial_prompt = initial_prompt,
                                                   query_list= self.build_llm_queries(),
-                                                  system_context = system_context,
-                                                  temperature = self.temperature)
+                                                  system_context = system_context)
             if self.persistent:
                 self._persist_evaluator()
 

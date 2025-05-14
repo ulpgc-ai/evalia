@@ -15,8 +15,7 @@ class GPTMockManager(GPTManager):
     def __init__(self):
         super().__init__(model="mock")
 
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
-                   temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         responses = [
             LanguageModelResponse(
                 response=f"Mock response for query: {query}",

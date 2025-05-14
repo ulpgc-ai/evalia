@@ -15,13 +15,12 @@ class GPTManager(LanguageModelManager):
     con modelos de lenguaje específicos de OpenAI.
     """
 
-    def __init__(self, model: str):
-        super().__init__(model)
+    def __init__(self, model: str, temperature: float = 0.0):
+        super().__init__(model, temperature)
         self.client = self.initialize_client()
 
     @abstractmethod
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
-                   temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         pass
 
     @abstractmethod

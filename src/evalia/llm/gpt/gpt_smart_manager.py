@@ -192,19 +192,19 @@ class RequestQueue:
 class GPTSmartManager(GPTManager, SmartManager):
     """Class to handle the OpenAI API restrictions."""
 
-    def __init__(self, model="gpt-3.5-turbo"):
-        super().__init__(model)
+    def __init__(self, model="gpt-3.5-turbo", temperature: float = 0.0):
+        super().__init__(model, temperature)
         self.request_queue = RequestQueue(model)
         self.encoding = self._initialize_encoding()
         logger.info("-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "", temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task:
             return self.task
         responses: List[LanguageModelResponse] = []
         for prompt in query_list:
-            response = self.query(GPTManager.convert_to_gpt_messages(prompt, initial_prompt, system_context), temperature)
+            response = self.query(GPTManager.convert_to_gpt_messages(prompt, initial_prompt, system_context))
             responses.append(LanguageModelResponse(response=response[0].choices[0].message.content,
                                                    elapsed_time=response[1]["elapsed_time"],
                                                    input_tokens=response[1]["input_tokens"],
@@ -238,7 +238,7 @@ class GPTSmartManager(GPTManager, SmartManager):
         return num_tokens
 
 
-    def query(self, messages: List[dict], temperature: float = 0.0):
+    def query(self, messages: List[dict]):
         """
         Send a query to the OpenAI API.
         A query is a list of messages, each message is a dictionary with the following keys:
@@ -256,7 +256,7 @@ class GPTSmartManager(GPTManager, SmartManager):
                 chat_completion = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
-                    temperature=temperature,
+                    temperature=self.temperature,
                     )
                 chat_successful = True
             except Exception as e:
