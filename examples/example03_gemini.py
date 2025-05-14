@@ -1,22 +1,25 @@
 '''
-EJEMPLO 1. Evaluar capitales europeas
+EJEMPLO 3. Evaluar capitales europeas.
+Partiendo del ejemplo 2 (repuesta JSON con comentarios),
+usamos el método Evaluator.postprocess_one_gpt_response() para
+extraer la calificación numérica y depositarla en la columna
+"Calificación GPT".
+
+Este ejemplo utiliza la API por lotes de OpenAI (Batch API).
 '''
 
 import pandas as pd
 import os
 
+from evalia.evaluated_answer import EvaluatedAnswerJSON
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
-from evalia.llm.gemini import GeminiBasicManager
-from evalia.llm.gpt import GPTSmartManager
+from evalia.llm.gemini.gemini_batch_manager import GeminiBatchManager
+from evalia.llm.gpt import GPTBatchManager
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompts import PromptFromString
 
-# Para configurar el modelo GPT que se va a usar
-MODELO_GPT = 'gpt-4o-mini'
-
-# Directorio de salida
 OUTPUT_DIR = "./output"
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
@@ -32,7 +35,7 @@ Tienes que calificar cada respuesta de la siguiente forma:
 1 = hay al menos cinco nombres y todos son capitales europeas.
 0 = cualquier otro caso.
 No importan las faltas de ortografía, por ejemplo considera correctas "Berlin" y "Verlin".
-Tu calificación debe venir en este formato: <número de respuesta>. <calificación>
+Tu calificación debe venir en este formato: [ <número de respuesta>, <calificación>, "<justificación de la calificación>" ]
 '''
 
 respuestas_estudiantes = {
@@ -48,26 +51,25 @@ respuestas_estudiantes = {
     "calificación real": [1, 1, 0, 0, 0, 1, 0]
 }
 
-
-evaluador = Evaluator(
-    evaluator_id = "capitales europeas",
-    student_answers= pd.DataFrame(respuestas_estudiantes),
-    system_context= PromptFromString(PROMPT),
-    query_batch_length=20
+evaluator_id = "capitales-gemini"
+evaluator = Evaluator(
+            evaluator_id = evaluator_id,
+            student_responses = pd.DataFrame(respuestas_estudiantes),
+            system_context= PromptFromString(PROMPT),
+            evaluated_answer_extractor=EvaluatedAnswerJSON,
+            query_batch_length=20,
+            postprocess_one_llm_response= lambda text: text[0],
+            managers = [
+                GeminiBatchManager(model="gemini-2.0-flash-001"),
+            ],
+            persistent = True,
 )
-evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini"))
-evaluador.add_manager(GeminiBasicManager(model="gemini-2.0-flash"))
-
-# Ejecuta la evaluación y devuelve un dataframe con el resultado
-df_result = evaluador.evaluate_answers()
+df_result = evaluator.evaluate_answers()
 
 print("Resultados:")
 print(df_result)
+evaluator.print_stats()
 
-# Imprime estadísticas: tokens y tiempo consumido
-evaluador.print_stats()
-
-# Guarda el resultado en un Excel
-EXCEL_FILE = os.path.join(OUTPUT_DIR, "example01.xlsx")
-df_result.to_excel(EXCEL_FILE)
+EXCEL_OUTPUT = os.path.join(OUTPUT_DIR, "example03_gemini.xlsx")
+df_result.to_excel(EXCEL_OUTPUT)
 

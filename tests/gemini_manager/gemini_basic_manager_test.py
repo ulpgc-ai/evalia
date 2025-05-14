@@ -3,13 +3,13 @@ import pickle
 import unittest
 
 from evalia.llm import LanguageModelResponse
-from evalia.llm.gemini import GeminiManager
+from evalia.llm.gemini import GeminiBasicManager
 
 
-class TestGeminiManager(unittest.TestCase):
+class TestGeminiBasicManager(unittest.TestCase):
 
     def test_serialization(self):
-        gemini_manager = GeminiManager(model="gemini-2.0-flash")
+        gemini_manager = GeminiBasicManager(model="gemini-2.0-flash")
         fake_response = LanguageModelResponse(response="Hola", elapsed_time=0, input_tokens=1, output_tokens=1)
         gemini_manager.responses = [fake_response]
         gemini_file_name = 'data.pkl'
@@ -23,7 +23,7 @@ class TestGeminiManager(unittest.TestCase):
             loaded_manager = pickle.load(file)
 
 
-        self.assertIsInstance(loaded_manager, GeminiManager)
+        self.assertIsInstance(loaded_manager, GeminiBasicManager)
         self.assertEqual(loaded_manager.model, "gemini-2.0-flash")
         self.assertEqual(len(loaded_manager.responses), 1)
         self.assertEqual(loaded_manager.responses[0].response, "Hola")

@@ -103,6 +103,7 @@ class EvaluatedAnswerJSON(EvaluatedAnswer):
         evaluated_responses = [EvaluatedAnswerJSON(block)
                                for text in llm_text_responses
                                for block in text.split(EvaluatedAnswerJSON.separator)
+                               if block.strip()  # Filter out empty blocks
                                ]
         return evaluated_responses
 
