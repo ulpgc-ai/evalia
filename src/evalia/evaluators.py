@@ -55,6 +55,7 @@ class Evaluator:
         self.responses_column = responses_column
         self.prompt = system_context
         self.sample_selector = sample_selector
+
         if isinstance(self.sample_selector, int):
             self.answers_dataframe = self.answers_dataframe.sample(n=self.sample_selector, random_state=42)
         elif isinstance(self.sample_selector, slice):
@@ -66,6 +67,14 @@ class Evaluator:
             self.answers_dataframe = self.sample_selector(self.answers_dataframe)
         elif self.sample_selector is not None:
             raise TypeError("Tipo de selector no soportado.")
+
+        if isinstance(self.responses_column, int):
+            self.student_answers = self.answers_dataframe.iloc[:, self.responses_column]
+        elif isinstance(self.responses_column, str):
+            self.student_answers = self.answers_dataframe[self.responses_column]
+        else:
+            raise TypeError("Tipo de columna de respuestas no soportado.")
+
         self.query_batch_length = query_batch_length
         self.api_response_class = evaluated_answer_extractor
         self.postprocess_one_llm_response = postprocess_one_llm_response
@@ -116,15 +125,6 @@ class Evaluator:
     def build_prompt_preamble(self):
         return self.prompt.get_prompt()
 
-    def build_llm_queries(self):
-        if isinstance(self.responses_column, int):
-            responses = self.answers_dataframe.iloc[:, self.responses_column]
-        elif isinstance(self.responses_column, str):
-            responses = self.answers_dataframe[self.responses_column]
-        else:
-            raise TypeError("Tipo de columna de respuestas no soportado.")
-        return self.partition_batches(responses)
-
     def partition_batches(self, responses) -> List[str]:
         """ Divides the responses into batches according to `self.query_batch_length` """
         total_responses = len(responses)
@@ -168,9 +168,9 @@ class Evaluator:
         for manager in self.managers:
             system_context, initial_prompt = self.build_prompt_preamble()
             manager.start_task(query_id = self.evaluator_id,
-                                                  initial_prompt = initial_prompt,
-                                                  query_list= self.build_llm_queries(),
-                                                  system_context = system_context)
+                              initial_prompt = initial_prompt,
+                              query_list= self.partition_batches(self.student_answers),
+                              system_context = system_context)
             if self.persistent:
                 self._persist_evaluator()
 
