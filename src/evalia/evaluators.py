@@ -55,18 +55,16 @@ class Evaluator:
         self.responses_column = responses_column
         self.prompt = system_context
         self.sample_selector = sample_selector
-        if self.sample_selector is None:
-            self.sample_answers = self.student_responses
-        elif isinstance(self.sample_selector, int):
-            self.sample_answers = self.student_responses.sample(n=self.sample_selector, random_state=42)
+        if isinstance(self.sample_selector, int):
+            self.student_responses = self.student_responses.sample(n=self.sample_selector, random_state=42)
         elif isinstance(self.sample_selector, slice):
-            self.sample_answers = self.student_responses[self.sample_selector]
+            self.student_responses = self.student_responses[self.sample_selector]
         elif isinstance(self.sample_selector, list):
             intersection = self.student_responses.index.intersection(self.sample_selector)
-            self.sample_answers = self.student_responses.iloc[intersection]
+            self.student_responses = self.student_responses.iloc[intersection]
         elif callable(self.sample_selector):
-            self.sample_answers = self.sample_selector(self.student_responses)
-        else:
+            self.student_responses = self.sample_selector(self.student_responses)
+        elif self.sample_selector is not None:
             raise TypeError("Tipo de selector no soportado.")
         self.query_batch_length = query_batch_length
         self.api_response_class = evaluated_answer_extractor
@@ -120,9 +118,9 @@ class Evaluator:
 
     def build_llm_queries(self):
         if isinstance(self.responses_column, int):
-            responses = self.sample_answers.iloc[:, self.responses_column]
+            responses = self.student_responses.iloc[:, self.responses_column]
         elif isinstance(self.responses_column, str):
-            responses = self.sample_answers[self.responses_column]
+            responses = self.student_responses[self.responses_column]
         else:
             raise TypeError("Tipo de columna de respuestas no soportado.")
         return self.partition_batches(responses)
@@ -166,7 +164,7 @@ class Evaluator:
         The responses are processed and the evaluations are extracted.
         :return: a DataFrame which is the same as the sample, but with two additional columns at the end: a column with the score and a column with the evaluation description.
         """
-        df = self.sample_answers.copy()
+        df = self.student_responses.copy()
         for manager in self.managers:
             system_context, initial_prompt = self.build_prompt_preamble()
             manager.start_task(query_id = self.evaluator_id,
