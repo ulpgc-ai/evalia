@@ -149,7 +149,7 @@ class Evaluator:
             print(f"Elapsed time: {sum(response.elapsed_time for response in manager.responses)} seconds")
             print("=============================================")
 
-    def save_llm_responses(self, llm_responses: List[LanguageModelResponse], llm_name: str):
+    def _save_llm_responses(self, llm_responses: List[LanguageModelResponse], llm_name: str):
         try:
             filename = os.path.join(cache_dir(), self.evaluator_id + f"_${llm_name}_responses.json")
             json_llm_responses = [asdict(x) for x in llm_responses]
@@ -178,7 +178,7 @@ class Evaluator:
 
         for manager in self.managers:
             llm_responses = manager.get_response(manager.task, timeout=0, retry=3)
-            self.save_llm_responses(llm_responses, manager.get_llm_name())
+            self._save_llm_responses(llm_responses, manager.get_llm_name())
             self._add_evaluation_columns_to_dataframe(df, llm_responses, manager.get_llm_name())
 
         logger.info(f'"{self.evaluator_id}" run successfully')
