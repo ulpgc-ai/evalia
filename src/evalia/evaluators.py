@@ -122,9 +122,6 @@ class Evaluator:
         self.__dict__.update(state)
         self.postprocess_one_llm_response = lambda x: x
 
-    def build_prompt_preamble(self):
-        return self.prompt.get_prompt()
-
     def partition_batches(self, responses) -> List[str]:
         """ Divides the responses into batches according to `self.query_batch_length` """
         total_responses = len(responses)
@@ -166,7 +163,7 @@ class Evaluator:
         """
         df = self.answers_dataframe.copy()
         for manager in self.managers:
-            system_context, initial_prompt = self.build_prompt_preamble()
+            system_context, initial_prompt = self.prompt.get_prompt()
             manager.start_task(query_id = self.evaluator_id,
                               initial_prompt = initial_prompt,
                               query_list= self.partition_batches(self.student_answers),
