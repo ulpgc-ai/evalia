@@ -20,7 +20,7 @@ class Evaluator:
     def __init__ (self,
                   evaluator_id: str = '',
                   managers: List[LanguageModelManager] = None,
-                  student_answers: pd.DataFrame = None,
+                  answers_dataframe: pd.DataFrame = None,
                   responses_column: int | str = 0,
                   system_context: PromptSource = None,
                   sample_selector: int | slice | list | Callable = None,
@@ -33,7 +33,7 @@ class Evaluator:
         Constructor of the Evaluator class.
         :param evaluator_id: the identifier of the evaluator.
         :param managers: the list of managers to use for the evaluation.
-        :param student_answers: the DataFrame with the student responses. At least one column with the student responses is required.
+        :param answers_dataframe: the DataFrame with the student responses. At least one column with the student responses is required.
         :param responses_column: the index of the column with the student responses in the DataFrame. It can be an integer or a string. By default, it is the first column of the DataFrame.
         :param system_context: context for the LLM. Normally containing instructions for the LLM.
         :param sample_selector: the range of responses to be selected from the DataFrame. It can be a slice (e.g. slice(0,15)), a list of indices (e.g. [1,7,99]),
@@ -51,19 +51,19 @@ class Evaluator:
         self.managers: List[LanguageModelManager] = managers if managers is not None else []
 
         self.evaluator_id = evaluator_id
-        self.student_answers = student_answers
+        self.answers_dataframe = answers_dataframe
         self.responses_column = responses_column
         self.prompt = system_context
         self.sample_selector = sample_selector
         if isinstance(self.sample_selector, int):
-            self.student_answers = self.student_answers.sample(n=self.sample_selector, random_state=42)
+            self.answers_dataframe = self.answers_dataframe.sample(n=self.sample_selector, random_state=42)
         elif isinstance(self.sample_selector, slice):
-            self.student_answers = self.student_answers[self.sample_selector]
+            self.answers_dataframe = self.answers_dataframe[self.sample_selector]
         elif isinstance(self.sample_selector, list):
-            intersection = self.student_answers.index.intersection(self.sample_selector)
-            self.student_answers = self.student_answers.iloc[intersection]
+            intersection = self.answers_dataframe.index.intersection(self.sample_selector)
+            self.answers_dataframe = self.answers_dataframe.iloc[intersection]
         elif callable(self.sample_selector):
-            self.student_answers = self.sample_selector(self.student_answers)
+            self.answers_dataframe = self.sample_selector(self.answers_dataframe)
         elif self.sample_selector is not None:
             raise TypeError("Tipo de selector no soportado.")
         self.query_batch_length = query_batch_length
@@ -118,9 +118,9 @@ class Evaluator:
 
     def build_llm_queries(self):
         if isinstance(self.responses_column, int):
-            responses = self.student_answers.iloc[:, self.responses_column]
+            responses = self.answers_dataframe.iloc[:, self.responses_column]
         elif isinstance(self.responses_column, str):
-            responses = self.student_answers[self.responses_column]
+            responses = self.answers_dataframe[self.responses_column]
         else:
             raise TypeError("Tipo de columna de respuestas no soportado.")
         return self.partition_batches(responses)
@@ -164,7 +164,7 @@ class Evaluator:
         The responses are processed and the evaluations are extracted.
         :return: a DataFrame which is the same as the sample, but with two additional columns at the end: a column with the score and a column with the evaluation description.
         """
-        df = self.student_answers.copy()
+        df = self.answers_dataframe.copy()
         for manager in self.managers:
             system_context, initial_prompt = self.build_prompt_preamble()
             manager.start_task(query_id = self.evaluator_id,

@@ -14,7 +14,7 @@ class TestSampleSelector(unittest.TestCase):
         cls.test_dataframe = pd.read_excel(data_path)
         cls.test_eva = Evaluator(
             evaluator_id="test evaluator", 
-            student_answers=cls.test_dataframe,
+            answers_dataframe=cls.test_dataframe,
         )
 
     def test_invalid_selector(self):

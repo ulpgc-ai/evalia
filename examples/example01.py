@@ -52,7 +52,7 @@ respuestas_estudiantes = {
 
 evaluador = Evaluator(
     evaluator_id = "capitales europeas",
-    student_answers= pd.DataFrame(respuestas_estudiantes),
+    answers_dataframe= pd.DataFrame(respuestas_estudiantes),
     system_context= PromptFromString(PROMPT),
     query_batch_length=20
 )
