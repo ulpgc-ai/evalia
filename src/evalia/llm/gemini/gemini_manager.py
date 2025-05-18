@@ -17,7 +17,7 @@ class GeminiManager(LanguageModelManager):
         if use_vertex:
             return genai.Client(vertexai=use_vertex)
         else:
-            return genai.Client(api_key=os.getenv('GEMINI_API_KEY'), vertexai=use_vertex)
+            return genai.Client(api_key=os.getenv('GOOGLE_API_KEY'), vertexai=use_vertex)
 
     @abstractmethod
     def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",

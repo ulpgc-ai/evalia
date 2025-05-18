@@ -23,7 +23,7 @@ Si la variable no está definida, se usará "Tier 1".
 Otros valores pueden ser "Tier 2", "Tier 3", "Tier 4" y "Tier 5".
 
 #### Gemini
-* `GEMINI_API_KEY`. Para poder utilizar la API de Gemini (Google).
+* `GOOGLE_API_KEY`. Para poder utilizar la API de Gemini (Google).
 * `GOOGLE_CLOUD_PROJECT`: Id del proyecto de Google Cloud, necesario para poder usar el procesamiento por lotes de Gemini.
 
 #### Claude
