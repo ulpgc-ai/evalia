@@ -76,7 +76,7 @@ class Evaluator:
             raise TypeError("Tipo de columna de respuestas no soportado.")
 
         self.query_batch_length = query_batch_length
-        self.api_response_class = evaluated_answer_extractor
+        self.evaluated_answer_class = evaluated_answer_extractor
         self.postprocess_one_llm_response = postprocess_one_llm_response
         self.persistent = persistent
 
@@ -181,7 +181,7 @@ class Evaluator:
 
     def _add_evaluation_columns_to_dataframe(self, df: pd.DataFrame, llm_responses: List[LanguageModelResponse], manager_name: str):
         text_messages = [x.response for x in llm_responses]
-        responses = self.api_response_class.extract_evaluated_answers(text_messages)
+        responses = self.evaluated_answer_class.extract_evaluated_answers(text_messages)
         get_score = lambda x: self.postprocess_one_llm_response(x.get_assessment())
         indexed_assessments = {x.get_index(): get_score(x) for x in responses}
         indexed_responses = {x.get_index(): x.get_full_response() for x in responses}
