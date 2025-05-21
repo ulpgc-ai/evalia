@@ -9,8 +9,8 @@ from evalia.llm import LanguageModelManager, LanguageModelTask, LanguageModelRes
 
 class ClaudeManager(LanguageModelManager):
 
-    def __init__(self, model: str):
-        super().__init__(model)
+    def __init__(self, model: str, temperature: float = 0.0):
+        super().__init__(model, temperature)
         self.client = self.initialize_client()
 
     @staticmethod
