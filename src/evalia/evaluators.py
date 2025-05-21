@@ -22,7 +22,7 @@ class Evaluator:
                   managers: List[LanguageModelManager] = None,
                   answers_dataframe: pd.DataFrame = None,
                   responses_column: int | str = 0,
-                  system_context: PromptSource = None,
+                  prompt: PromptSource = None,
                   sample_selector: int | slice | list | Callable = None,
                   query_batch_length: int = 20,
                   evaluated_answer_extractor: Type[EvaluatedAnswer] = EvaluatedAnswerOneLine,
@@ -35,7 +35,7 @@ class Evaluator:
         :param managers: the list of managers to use for the evaluation.
         :param answers_dataframe: the DataFrame with the student responses. At least one column with the student responses is required.
         :param responses_column: the index of the column with the student responses in the DataFrame. It can be an integer or a string. By default, it is the first column of the DataFrame.
-        :param system_context: context for the LLM. Normally containing instructions for the LLM.
+        :param prompt: context for the LLM. Normally containing instructions for the LLM.
         :param sample_selector: the range of responses to be selected from the DataFrame. It can be a slice (e.g. slice(0,15)), a list of indices (e.g. [1,7,99]),
         an integer N that will be used to take a random sample of N responses, or a Callable object (e.g. a lambda expression). If set to None, all responses are selected.
         :param query_batch_length: the number of responses that will be packed in each query to each LLM. Any integer value greater than 0 is valid.
@@ -53,7 +53,7 @@ class Evaluator:
         self.evaluator_id = evaluator_id
         self.answers_dataframe = answers_dataframe
         self.responses_column = responses_column
-        self.prompt = system_context
+        self.prompt = prompt
         self.sample_selector = sample_selector
 
         if isinstance(self.sample_selector, int):

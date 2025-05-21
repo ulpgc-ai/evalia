@@ -86,7 +86,7 @@ evaluador = Evaluator(
     evaluator_id="capitales europeas",
     answers_dataframe=pd.DataFrame(respuestas_estudiantes),
     responses_column="respuesta",
-    system_context=PromptFromString(mi_prompt),
+    prompt=PromptFromString(mi_prompt),
     gpt_manager=MODELO_GPT,
     query_batch_length=20
 )

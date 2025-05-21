@@ -60,7 +60,7 @@ def postprocess_one_gpt_response(text):
 evaluator = Evaluator(
     evaluator_id = "oraciones_compuestas",
     answers_dataframe= pd.DataFrame(respuestas_estudiantes),
-    system_context = prompt,
+    prompt= prompt,
     managers = [
         GPTSmartManager(model=MODELO_GPT)
     ],

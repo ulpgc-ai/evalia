@@ -50,7 +50,7 @@ respuestas_estudiantes = {
 evaluator = Evaluator(
         evaluator_id = "capitales europeas",
         answers_dataframe= pd.DataFrame(respuestas_estudiantes),
-        system_context= PromptFromString(PROMPT),
+        prompt= PromptFromString(PROMPT),
         managers = [
             GPTBatchManager(model=MODELO_GPT)
         ],

@@ -53,7 +53,7 @@ respuestas_estudiantes = {
 evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     answers_dataframe= pd.DataFrame(respuestas_estudiantes),
-    system_context= PromptFromString(PROMPT),
+    prompt= PromptFromString(PROMPT),
     query_batch_length=20
 )
 evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini"))
