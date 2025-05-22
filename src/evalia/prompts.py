@@ -42,7 +42,7 @@ class PromptFromTextFile(PromptSource):
         self.prompt_filename = prompt_filename
 
     def get_prompt(self):
-        with open(self.prompt_filename, 'r') as prompt_file:
+        with open(self.prompt_filename, 'r', encoding="utf-8") as prompt_file:
             prompt_text = prompt_file.read()
         prompt_preamble = PromptFromString(prompt_text).get_prompt()
         return prompt_preamble
