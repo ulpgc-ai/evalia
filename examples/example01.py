@@ -7,6 +7,7 @@ import os
 
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
+from evalia.llm.evaluated_answer import EvaluatedAnswer, EvaluatedJustifiedAnswers, EvaluatedAnswers
 from evalia.llm.gemini import GeminiBasicManager
 from evalia.llm.claude import ClaudeBasicManager
 from evalia.llm.gpt import GPTSmartManager
@@ -33,7 +34,6 @@ Tienes que calificar cada respuesta de la siguiente forma:
 1 = hay al menos cinco nombres y todos son capitales europeas.
 0 = cualquier otro caso.
 No importan las faltas de ortografía, por ejemplo considera correctas "Berlin" y "Verlin".
-Tu calificación debe venir en este formato: <número de respuesta>. <calificación>
 '''
 
 respuestas_estudiantes = {
@@ -54,9 +54,9 @@ evaluador = Evaluator(
     evaluator_id = "capitales europeas",
     answers_dataframe= pd.DataFrame(respuestas_estudiantes),
     prompt= PromptFromString(PROMPT),
-    query_batch_length=20
+    query_batch_length=2
 )
-evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini"))
+evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini", structured_output_class=EvaluatedAnswers))
 evaluador.add_manager(GeminiBasicManager(model="gemini-2.0-flash"))
 evaluador.add_manager(ClaudeBasicManager(model="claude-3-5-sonnet-latest"))
 

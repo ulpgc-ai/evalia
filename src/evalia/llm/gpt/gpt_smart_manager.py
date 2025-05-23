@@ -5,14 +5,16 @@ Implementation of a GPT Manager class to handle the OpenAI API restrictions.
 """
 
 from collections import deque, namedtuple
-from typing import List, Union, Literal
+from typing import List, Union, Literal, Type
 
 from openai.types.chat import ChatCompletionDeveloperMessageParam, ChatCompletionSystemMessageParam, \
     ChatCompletionUserMessageParam, ChatCompletionAssistantMessageParam, ChatCompletionToolMessageParam, \
     ChatCompletionFunctionMessageParam
+from pydantic import BaseModel
 from tiktoken import Encoding
 
 from evalia.llm import SmartManager, LanguageModelResponse, LanguageModelTask
+from evalia.llm.evaluated_answer import EvaluatedJustifiedAnswers
 from evalia.llm.gpt import GPTManager
 from src.evalia.logs import get_logger
 
@@ -192,8 +194,8 @@ class RequestQueue:
 class GPTSmartManager(GPTManager, SmartManager):
     """Class to handle the OpenAI API restrictions."""
 
-    def __init__(self, model="gpt-3.5-turbo", temperature: float = 0.0):
-        super().__init__(model, temperature)
+    def __init__(self, model="gpt-3.5-turbo", temperature: float = 0.0, structured_output_class: Type[BaseModel] = EvaluatedJustifiedAnswers):
+        super().__init__(model, temperature, structured_output_class)
         self.request_queue = RequestQueue(model)
         self.encoding = self._initialize_encoding()
         logger.info("-----------------------------------")
@@ -253,10 +255,11 @@ class GPTSmartManager(GPTManager, SmartManager):
         chat_successful = False
         while not chat_successful:
             try:
-                chat_completion = self.client.chat.completions.create(
+                chat_completion = self.client.beta.chat.completions.parse(
                     model=self.model,
                     messages=messages,
                     temperature=self.temperature,
+                    response_format = self.structured_output_class
                     )
                 chat_successful = True
             except Exception as e:

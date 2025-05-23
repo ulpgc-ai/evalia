@@ -1,11 +1,13 @@
 import json
 import os
 from abc import abstractmethod
-from typing import List
+from typing import List, Type
 
 from openai import OpenAI
+from pydantic import BaseModel
 
 from evalia.llm import LanguageModelManager, LanguageModelResponse, LanguageModelTask
+from evalia.llm.evaluated_answer import EvaluatedJustifiedAnswers
 
 
 class GPTManager(LanguageModelManager):
@@ -15,8 +17,8 @@ class GPTManager(LanguageModelManager):
     con modelos de lenguaje específicos de OpenAI.
     """
 
-    def __init__(self, model: str, temperature: float = 0.0):
-        super().__init__(model, temperature)
+    def __init__(self, model: str, temperature: float = 0.0, structured_output_class: Type[BaseModel] = EvaluatedJustifiedAnswers):
+        super().__init__(model, temperature, structured_output_class)
         self.client = self.initialize_client()
 
     @abstractmethod

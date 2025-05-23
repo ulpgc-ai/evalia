@@ -1,4 +1,4 @@
-from .evaluated_answer import EvaluatedAnswers
+from .evaluated_answer import EvaluatedJustifiedAnswer, EvaluatedAnswers
 from .language_model_response import LanguageModelResponse
 from .language_model_task import LanguageModelTask
 from .language_model_manager import LanguageModelManager

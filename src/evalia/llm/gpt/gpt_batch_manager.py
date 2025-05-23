@@ -28,12 +28,6 @@ class GPTBatchManager(GPTManager, BatchManager):
     Sends queries in batches for deferred response.
     """
 
-    def __init__(self,model="", temperature: float = 0.0):
-        super().__init__(model=model, temperature=temperature)
-        self.batch_api = True
-        logger.info("-----------------------------------")
-        logger.info(f"GPTBatchManager started. Model: {self.model}")
-
     def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task is not None:
             return self.task

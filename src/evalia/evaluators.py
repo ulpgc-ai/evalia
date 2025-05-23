@@ -1,14 +1,14 @@
 from dataclasses import asdict
-from typing import Type, List, Self, Callable
+from typing import List, Self, Callable
 import pandas as pd
 import os
 import json
 import pickle
 
+from evalia.llm.evaluated_answer import EvaluatedAnswer
 from evalia.logs import get_logger
 from evalia.prompts import PromptSource
-from evalia.llm import LanguageModelManager, LanguageModelResponse
-from evalia.evaluated_answer import EvaluatedAnswer, EvaluatedAnswerOneLine
+from evalia.llm import LanguageModelManager, LanguageModelResponse, EvaluatedJustifiedAnswer
 from evalia.config import cache_dir
 
 # Columns added by the automatic evaluator to the response DataFrame
@@ -25,7 +25,6 @@ class Evaluator:
                   prompt: PromptSource = None,
                   sample_selector: int | slice | list | Callable = None,
                   query_batch_length: int = 20,
-                  evaluated_answer_extractor: Type[EvaluatedAnswer] = EvaluatedAnswerOneLine,
                   postprocess_one_llm_response: Callable[[str], str | int] = lambda text: text,
                   persistent: bool = False
                   ):
@@ -39,7 +38,6 @@ class Evaluator:
         :param sample_selector: the range of responses to be selected from the DataFrame. It can be a slice (e.g. slice(0,15)), a list of indices (e.g. [1,7,99]),
         an integer N that will be used to take a random sample of N responses, or a Callable object (e.g. a lambda expression). If set to None, all responses are selected.
         :param query_batch_length: the number of responses that will be packed in each query to each LLM. Any integer value greater than 0 is valid.
-        :param evaluated_answer_extractor: the modality of the response from the LLM (one line or multiple lines).
         :param postprocess_one_llm_response: a function to postprocess the response from the LLM. It should take a string as input and return a string as output.
         :param persistent: if True, the evaluator will be saved to a file after executing the tasks, and can be loaded in a subsequent execution.
         """
@@ -76,7 +74,6 @@ class Evaluator:
             raise TypeError("Tipo de columna de respuestas no soportado.")
 
         self.query_batch_length = query_batch_length
-        self.evaluated_answer_class = evaluated_answer_extractor
         self.postprocess_one_llm_response = postprocess_one_llm_response
         self.persistent = persistent
 
@@ -173,20 +170,29 @@ class Evaluator:
 
         for manager in self.managers:
             llm_responses = manager.get_response(manager.task, timeout=0, retry=3)
+            evaluated_answers = self._convert_to_evaluated_answers(llm_responses, manager.structured_output_class)
             self._save_llm_responses(llm_responses, manager.get_llm_name())
-            self._add_evaluation_columns_to_dataframe(df, llm_responses, manager.get_llm_name())
+            self._add_evaluation_columns_to_dataframe(df, evaluated_answers, manager.get_llm_name())
 
         logger.info(f'"{self.evaluator_id}" run successfully')
         return df
 
-    def _add_evaluation_columns_to_dataframe(self, df: pd.DataFrame, llm_responses: List[LanguageModelResponse], manager_name: str):
+    @staticmethod
+    def _add_evaluation_columns_to_dataframe(df: pd.DataFrame, evaluated_answers: List[EvaluatedAnswer], manager_name: str):
+        score_dict = {x.index: x.score for x in evaluated_answers}
+        comments_dict = {x.index: x.comment if isinstance(x, EvaluatedJustifiedAnswer) else "-" for x in evaluated_answers}
+        df.loc[:, COLNAME_AI_GRADES + manager_name] = df.index.map(score_dict)
+        df.loc[:, COLNAME_AI_FULL_EVALUATIONS + manager_name] = df.index.map(comments_dict)
+
+    @staticmethod
+    def _convert_to_evaluated_answers(llm_responses: List[LanguageModelResponse], structured_output_class):
+        evaluated_answers: List[EvaluatedAnswer] = []
         text_messages = [x.response for x in llm_responses]
-        responses = self.evaluated_answer_class.extract_evaluated_answers(text_messages)
-        get_score = lambda x: self.postprocess_one_llm_response(x.get_assessment())
-        indexed_assessments = {x.get_index(): get_score(x) for x in responses}
-        indexed_responses = {x.get_index(): x.get_full_response() for x in responses}
-        df.loc[:, COLNAME_AI_GRADES + manager_name] = df.index.map(indexed_assessments)
-        df.loc[:, COLNAME_AI_FULL_EVALUATIONS + manager_name] = df.index.map(indexed_responses)
+        for text_message in text_messages:
+            parsed_evaluated_answers = structured_output_class(**json.loads(text_message))
+            evaluated_answers.extend(parsed_evaluated_answers.results)
+        return evaluated_answers
+
 
 
 def save_excel(df: pd.DataFrame, file_name: str, output_dir: str | None = None):

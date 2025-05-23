@@ -1,15 +1,19 @@
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Type
+
+from pydantic import BaseModel
 
 from evalia.llm import LanguageModelResponse, LanguageModelTask
+from evalia.llm.evaluated_answer import EvaluatedJustifiedAnswers
 
 
 class LanguageModelManager(ABC):
     """Interface to interact with different language models."""
 
-    def __init__(self, model: str, temperature: float = 0.0):
+    def __init__(self, model: str, temperature: float = 0.0, structured_output_class: Type[BaseModel] = EvaluatedJustifiedAnswers):
         self.model = model
         self.temperature = temperature
+        self.structured_output_class = structured_output_class
         self.task: LanguageModelTask | None = None
         self.responses: List[LanguageModelResponse] | None = None
 

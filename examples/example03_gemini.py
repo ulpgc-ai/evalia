@@ -11,11 +11,9 @@ Este ejemplo utiliza la API por lotes de OpenAI (Batch API).
 import pandas as pd
 import os
 
-from evalia.evaluated_answer import EvaluatedAnswerJSON
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
 from evalia.llm.gemini.gemini_batch_manager import GeminiBatchManager
-from evalia.llm.gpt import GPTBatchManager
 
 # Para leer prompts desde cadenas de texto
 from evalia.prompts import PromptFromString
@@ -54,9 +52,8 @@ respuestas_estudiantes = {
 evaluator_id = "capitales-gemini"
 evaluator = Evaluator(
             evaluator_id = evaluator_id,
-            student_responses = pd.DataFrame(respuestas_estudiantes),
+            answers_dataframe = pd.DataFrame(respuestas_estudiantes),
             prompt= PromptFromString(PROMPT),
-            evaluated_answer_extractor=EvaluatedAnswerJSON,
             query_batch_length=20,
             postprocess_one_llm_response= lambda text: text[0],
             managers = [

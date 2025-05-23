@@ -3,7 +3,6 @@ import os
 import pandas as pd
 
 from evalia import Evaluator
-from evalia.evaluated_answer import EvaluatedAnswerJSON
 from evalia.llm.claude.claude_batch_manager import ClaudeBatchManager
 from evalia.prompts import PromptFromString
 
@@ -44,7 +43,6 @@ evaluator = Evaluator(
             evaluator_id = evaluator_id,
             answers_dataframe= pd.DataFrame(respuestas_estudiantes),
             prompt= PromptFromString(PROMPT),
-            evaluated_answer_extractor=EvaluatedAnswerJSON,
             query_batch_length=20,
             postprocess_one_llm_response= lambda text: text[0],
             managers = [
