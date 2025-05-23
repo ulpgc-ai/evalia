@@ -71,12 +71,30 @@ class GPTBatchManager(GPTManager, BatchManager):
             assert len(query_list) <= MAX_REQUESTS_PER_BATCH, \
                 f"Number of requests {len(query_list)} exceeds limit {MAX_REQUESTS_PER_BATCH}"
 
+            # Generate the schema from the structured_output_class
+            schema = self.structured_output_class.model_json_schema()
+            schema["additionalProperties"] = False
+            schema_dict = {
+                "name": self.structured_output_class.__name__,
+                "strict": True,
+                "schema": schema
+            }
+
+
             JSONL_TEMPLATE = (
-                '{{ "custom_id": "{custom_id}", "method": "POST", '
-                '"url": "/v1/chat/completions", '
-                '"body": '
-                  '{{ "model": "{model}", "temperature": {temperature}, '
-                     '"messages": {messages} }} '
+                '{{ '
+                    '"custom_id": "{custom_id}", '
+                    '"method": "POST", '
+                    '"url": "/v1/chat/completions", '
+                    '"body": {{ '
+                        '"model": "{model}", '
+                        '"temperature": {temperature}, '
+                        '"messages": {messages}, '
+                            '"response_format": {{ '
+                                '"type": "json_schema", '
+                                '"json_schema": {json_schema} '
+                            '}} '
+                    '}} '
                 '}}'
             )
 
@@ -88,7 +106,8 @@ class GPTBatchManager(GPTManager, BatchManager):
                         custom_id=query_counter,
                         model=self.model,
                         temperature=self.temperature,
-                        messages=json.dumps(GPTManager.convert_to_gpt_messages(query, initial_prompt, system_context))
+                        messages=json.dumps(GPTManager.convert_to_gpt_messages(query, initial_prompt, system_context)),
+                        json_schema = json.dumps(schema_dict)
                     )
                     f.write(json_line)
                     f.write("\n")

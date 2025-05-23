@@ -7,7 +7,7 @@ import os
 
 # Clase para evaluador automático
 from evalia.evaluators import Evaluator
-from evalia.llm.evaluated_answer import EvaluatedAnswer, EvaluatedJustifiedAnswers, EvaluatedAnswers
+from evalia.llm.evaluated_answer import EvaluatedAnswers
 from evalia.llm.gemini import GeminiBasicManager
 from evalia.llm.claude import ClaudeBasicManager
 from evalia.llm.gpt import GPTSmartManager
