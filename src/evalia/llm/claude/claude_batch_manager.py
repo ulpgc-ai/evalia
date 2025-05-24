@@ -16,8 +16,7 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
     def __init__(self, model: str):
         super().__init__(model=model)
 
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
-                   temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task is not None:
             return self.task
         requests: List[batch_create_params.Request] = []
@@ -30,7 +29,7 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
                         max_tokens=1024,
                         messages=self.convert_to_claude_messages(query, initial_prompt, system_context),
                         system=system_context,
-                        temperature=temperature
+                        temperature=self.temperature
                     )
                 )
             )
