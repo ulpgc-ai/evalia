@@ -170,8 +170,8 @@ class Evaluator:
 
         for manager in self.managers:
             llm_responses = manager.get_response(manager.task, timeout=0, retry=3)
-            evaluated_answers = self._convert_to_evaluated_answers(llm_responses, manager.structured_output_class)
             self._save_llm_responses(llm_responses, manager.get_llm_name())
+            evaluated_answers = self._convert_to_evaluated_answers(llm_responses, manager.structured_output_class)
             self._add_evaluation_columns_to_dataframe(df, evaluated_answers, manager.get_llm_name())
 
         logger.info(f'"{self.evaluator_id}" run successfully')
@@ -179,10 +179,8 @@ class Evaluator:
 
     @staticmethod
     def _add_evaluation_columns_to_dataframe(df: pd.DataFrame, evaluated_answers: List[EvaluatedAnswer], manager_name: str):
-        score_dict = {x.index: x.score for x in evaluated_answers}
-        comments_dict = {x.index: x.comment if isinstance(x, EvaluatedJustifiedAnswer) else "-" for x in evaluated_answers}
-        df.loc[:, COLNAME_AI_GRADES + manager_name] = df.index.map(score_dict)
-        df.loc[:, COLNAME_AI_FULL_EVALUATIONS + manager_name] = df.index.map(comments_dict)
+        df[COLNAME_AI_GRADES + manager_name] = [x.score for x in evaluated_answers]
+        df[COLNAME_AI_FULL_EVALUATIONS + manager_name] = [x.comment for x in evaluated_answers]
 
     @staticmethod
     def _convert_to_evaluated_answers(llm_responses: List[LanguageModelResponse], structured_output_class):

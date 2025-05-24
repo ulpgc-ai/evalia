@@ -56,8 +56,8 @@ evaluador = Evaluator(
     prompt= PromptFromString(PROMPT),
     query_batch_length=2
 )
-evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini", structured_output_class=EvaluatedAnswers))
-evaluador.add_manager(GeminiBasicManager(model="gemini-2.0-flash"))
+evaluador.add_manager(GPTSmartManager(model="gpt-4o-mini"))
+#evaluador.add_manager(GeminiBasicManager(model="gemini-2.0-flash"))
 evaluador.add_manager(ClaudeBasicManager(model="claude-3-5-sonnet-latest"))
 
 # Ejecuta la evaluación y devuelve un dataframe con el resultado

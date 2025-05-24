@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import List
 
 from anthropic.types.message_create_params import MessageCreateParamsNonStreaming
-from anthropic.types.messages import MessageBatch
+from anthropic.types.messages import MessageBatch, batch_create_params
 from anthropic.types.messages.batch_create_params import Request
 
 from evalia.llm import BatchManager, LanguageModelTask, LanguageModelResponse
@@ -20,32 +20,23 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
                    temperature: float = 0.0) -> LanguageModelTask:
         if self.task is not None:
             return self.task
-        message_batch: MessageBatch = self.client.messages.batches.create(
-            requests=[
+        requests: List[batch_create_params.Request] = []
+        for query in query_list:
+            requests.append(
                 Request(
                     custom_id=query_id,
                     params=MessageCreateParamsNonStreaming(
                         model=self.model,
                         max_tokens=1024,
-                        messages=self.build_request_messages(initial_prompt, query_list),
+                        messages=self.convert_to_claude_messages(query, initial_prompt, system_context),
                         system=system_context,
                         temperature=temperature
                     )
-                ),
-            ]
-        )
+                )
+            )
+        message_batch: MessageBatch = self.client.messages.batches.create(requests= requests)
         self.task = LanguageModelTask(id=message_batch.id)
         return self.task
-
-    @staticmethod
-    def build_request_messages(initial_prompt, query_list):
-        request_messages = [ClaudeManager.create_claude_input_message("user", initial_prompt),
-                            ClaudeManager.create_claude_input_message("assistant",
-                                                                      "Sí, he entendido las instrucciones. Pásame las respuestas para evaluar.")
-                            ]
-        for query in query_list:
-            request_messages.append(ClaudeManager.create_claude_input_message("user", query))
-        return request_messages
 
     def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
         if self.responses is not None:

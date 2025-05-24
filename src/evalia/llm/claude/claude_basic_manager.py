@@ -15,18 +15,14 @@ class ClaudeBasicManager(ClaudeManager):
             start_time = time.time()
             response = self.client.messages.create(
                 model=self.model,
-                messages=[ClaudeManager.create_claude_input_message("user", initial_prompt),
-                          ClaudeManager.create_claude_input_message("assistant",
-                                                              "Sí, he entendido las instrucciones. Pásame las respuestas para evaluar."),
-                          ClaudeManager.create_claude_input_message("user", query)
-                          ],
+                messages=self.convert_to_claude_messages(query, initial_prompt, system_context),
                 system=system_context,
                 max_tokens=1000,
                 temperature=0
             )
             elapsed_time = time.time() - start_time
             responses.append(LanguageModelResponse(
-                response=response.content[0].text,
+                response=self.parse_claude_response(response.content[0].text),
                 input_tokens=response.usage.input_tokens,
                 output_tokens=response.usage.output_tokens,
                 elapsed_time=elapsed_time
