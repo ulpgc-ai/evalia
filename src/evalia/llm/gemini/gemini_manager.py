@@ -1,14 +1,17 @@
 import os
 from abc import abstractmethod
-from typing import List
+from typing import List, Type
 from google import genai
+from pydantic import BaseModel
+
 from evalia.llm import LanguageModelManager, LanguageModelResponse, LanguageModelTask
+from evalia.llm.evaluated_answer import EvaluatedJustifiedAnswers
 
 
 class GeminiManager(LanguageModelManager):
 
-    def __init__(self, model, temperature: float = 0.0, use_vertex: bool = False):
-        super().__init__(model=model, temperature=temperature)
+    def __init__(self, model, temperature: float = 0.0, structured_output_class: Type[BaseModel] = EvaluatedJustifiedAnswers, use_vertex: bool = False):
+        super().__init__(model=model, temperature=temperature, structured_output_class=structured_output_class)
         self.use_vertex = use_vertex
         self.client = self.initialize_client(use_vertex)
 

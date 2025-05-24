@@ -18,7 +18,12 @@ class GeminiBasicManager(GeminiManager):
             gemini_response: GenerateContentResponse = self.client.models.generate_content(
                 model=self.model,
                 contents=initial_prompt + prompt,
-                config=types.GenerateContentConfig(system_instruction=system_context, temperature=self.temperature)
+                config=types.GenerateContentConfig(
+                    system_instruction=system_context,
+                    temperature=self.temperature,
+                    response_mime_type="application/json",
+                    response_schema=self.structured_output_class
+                )
             )
             end_time = time.time()
             responses.append(

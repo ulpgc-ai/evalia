@@ -1,12 +1,15 @@
 import json
 import os
 import time
-from typing import List
+from typing import List, Type
 
 from google.cloud.storage import Client, Bucket, Blob
 from google.genai.types import CreateBatchJobConfig, BatchJob, JobState
 from google.cloud import storage
+from pydantic import BaseModel
+
 from evalia.llm import BatchManager, LanguageModelTask, LanguageModelResponse
+from evalia.llm.evaluated_answer import EvaluatedJustifiedAnswers
 from evalia.llm.gemini import GeminiManager
 
 
@@ -19,8 +22,8 @@ class GeminiBatchManager(GeminiManager, BatchManager):
         JobState.JOB_STATE_PAUSED,
     }
 
-    def __init__(self, model: str, temperature: float = 0.0):
-        super().__init__(model=model, temperature=temperature, use_vertex=True)
+    def __init__(self, model: str, temperature: float = 0.0, structured_output_class: Type[BaseModel] = EvaluatedJustifiedAnswers):
+        super().__init__(model=model, temperature=temperature, structured_output_class=structured_output_class, use_vertex=True)
         self.storage_client: Client = storage.Client()
         self.bucket_name = os.getenv("GOOGLE_CLOUD_STORAGE_BUCKET_NAME") # for example "evalia-test"
         self.destination_uri = os.getenv("GOOGLE_CLOUD_STORAGE_JSONL_DESTINATION_URI") # for example "data/input". This is where the JSONL file will be saved
@@ -29,7 +32,7 @@ class GeminiBatchManager(GeminiManager, BatchManager):
     def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task is not None:
             return self.task
-        jsonl_file_name = self.create_jsonl_file(query_id, initial_prompt, query_list, self.temperature, system_context)
+        jsonl_file_name = self.create_jsonl_file(query_id, initial_prompt, query_list, self.temperature, self.structured_output_class, system_context)
         gcs_uri = self.upload_jsonl_to_google_cloud_storage(jsonl_file_name)
         self.delete_jsonl_file(jsonl_file_name)
         job: BatchJob = self.client.batches.create(
@@ -48,7 +51,7 @@ class GeminiBatchManager(GeminiManager, BatchManager):
         return f"gs://{bucket_name}/{destination_uri}/{query_id}"
 
     @staticmethod
-    def create_jsonl_file(query_id: str, initial_prompt: str, query_list: List[str], temperature: float, system_context: str = "") -> str:
+    def create_jsonl_file(query_id: str, initial_prompt: str, query_list: List[str], temperature: float, structured_output_class: Type[BaseModel], system_context: str = "") -> str:
         file_name = f"{query_id}.jsonl"
         with open(file_name, 'w') as f:
             for i in range(1, len(query_list) + 1):
@@ -65,7 +68,9 @@ class GeminiBatchManager(GeminiManager, BatchManager):
                             }
                         ],
                         "generationConfig": {
-                            "temperature": temperature
+                            "temperature": temperature,
+                            "responseMimeType": "application/json",
+                            "responseSchema": GeminiBatchManager.convert_to_vertex_compatible_schema(structured_output_class)
                         }
                     }
                 }
@@ -77,6 +82,21 @@ class GeminiBatchManager(GeminiManager, BatchManager):
                     }
             f.write(json.dumps(request_obj) + "\n")
         return file_name
+
+    @staticmethod
+    def convert_to_vertex_compatible_schema(structured_output_class: Type[BaseModel]) -> dict:
+        raw_schema = structured_output_class.model_json_schema()
+        resolved_schema = raw_schema.copy()
+        if "$defs" in resolved_schema:
+            if "properties" in resolved_schema and "results" in resolved_schema["properties"]:
+                if "items" in resolved_schema["properties"]["results"] and "$ref" in \
+                        resolved_schema["properties"]["results"]["items"]:
+                    ref_path = resolved_schema["properties"]["results"]["items"]["$ref"]
+                    ref_name = ref_path.split("/")[-1]
+                    if ref_name in resolved_schema["$defs"]:
+                        resolved_schema["properties"]["results"]["items"] = resolved_schema["$defs"][ref_name]
+            del resolved_schema["$defs"]
+        return resolved_schema
 
     def upload_jsonl_to_google_cloud_storage(self, local_file_name: str) -> str:
         try:
