@@ -9,8 +9,7 @@ from evalia.llm.gemini import GeminiManager
 
 
 class GeminiBasicManager(GeminiManager):
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
-                   temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task:
             return self.task
         responses = []
@@ -19,7 +18,7 @@ class GeminiBasicManager(GeminiManager):
             gemini_response: GenerateContentResponse = self.client.models.generate_content(
                 model=self.model,
                 contents=initial_prompt + prompt,
-                config=types.GenerateContentConfig(system_instruction=system_context)
+                config=types.GenerateContentConfig(system_instruction=system_context, temperature=self.temperature)
             )
             end_time = time.time()
             responses.append(

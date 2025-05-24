@@ -20,8 +20,7 @@ class GeminiManager(LanguageModelManager):
             return genai.Client(api_key=os.getenv('GOOGLE_API_KEY'), vertexai=use_vertex)
 
     @abstractmethod
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
-                   temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         pass
 
     @abstractmethod

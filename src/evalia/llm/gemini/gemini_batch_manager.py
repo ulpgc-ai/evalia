@@ -19,18 +19,17 @@ class GeminiBatchManager(GeminiManager, BatchManager):
         JobState.JOB_STATE_PAUSED,
     }
 
-    def __init__(self, model: str):
-        super().__init__(model=model, use_vertex=True)
+    def __init__(self, model: str, temperature: float = 0.0):
+        super().__init__(model=model, temperature=temperature, use_vertex=True)
         self.storage_client: Client = storage.Client()
         self.bucket_name = os.getenv("GOOGLE_CLOUD_STORAGE_BUCKET_NAME") # for example "evalia-test"
         self.destination_uri = os.getenv("GOOGLE_CLOUD_STORAGE_JSONL_DESTINATION_URI") # for example "data/input". This is where the JSONL file will be saved
         self.output_uri = os.getenv("GOOGLE_CLOUD_STORAGE_BATCH_OUTPUT_URI") # for example "data/output". This is where the batch results will be saved
 
-    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "",
-                   temperature: float = 0.0) -> LanguageModelTask:
+    def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task is not None:
             return self.task
-        jsonl_file_name = self.create_jsonl_file(query_id, initial_prompt, query_list, system_context)
+        jsonl_file_name = self.create_jsonl_file(query_id, initial_prompt, query_list, self.temperature, system_context)
         gcs_uri = self.upload_jsonl_to_google_cloud_storage(jsonl_file_name)
         self.delete_jsonl_file(jsonl_file_name)
         job: BatchJob = self.client.batches.create(
@@ -49,7 +48,7 @@ class GeminiBatchManager(GeminiManager, BatchManager):
         return f"gs://{bucket_name}/{destination_uri}/{query_id}"
 
     @staticmethod
-    def create_jsonl_file(query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> str:
+    def create_jsonl_file(query_id: str, initial_prompt: str, query_list: List[str], temperature: float, system_context: str = "") -> str:
         file_name = f"{query_id}.jsonl"
         with open(file_name, 'w') as f:
             for i in range(1, len(query_list) + 1):
@@ -64,7 +63,10 @@ class GeminiBatchManager(GeminiManager, BatchManager):
                                 },
                                 "role": "user"
                             }
-                        ]
+                        ],
+                        "generationConfig": {
+                            "temperature": temperature
+                        }
                     }
                 }
                 if system_context:
