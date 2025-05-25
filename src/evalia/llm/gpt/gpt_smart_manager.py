@@ -46,7 +46,7 @@ class OpenAILimits:
     tpm: int
 
 # Values taken from https://platform.openai.com/docs/guides/rate-limits/usage-tiers?context=tier-one
-# updated: 2024-10-08
+# updated: 2025-05-25
 OPENAI_LIMITS = {
     'tier 1': {
         'gpt-4o': OpenAILimits(rpm=500, tpm=30_000),
@@ -54,6 +54,7 @@ OPENAI_LIMITS = {
         'gpt-4-turbo': OpenAILimits(rpm=500, tpm=30_000),
         'gpt-4': OpenAILimits(rpm=500, tpm=10_000),
         'gpt-3.5-turbo': OpenAILimits(rpm=3500, tpm=200_000),
+        'gpt-4.1-nano': OpenAILimits(rpm=500, tpm=200_000)
     },
     'tier 2': {
         'gpt-4o': OpenAILimits(rpm=5000, tpm=450_000),
@@ -61,6 +62,7 @@ OPENAI_LIMITS = {
         'gpt-4-turbo': OpenAILimits(rpm=5000, tpm=450_000),
         'gpt-4': OpenAILimits(rpm=5000, tpm=40_000),
         'gpt-3.5-turbo': OpenAILimits(rpm=3500, tpm=2_000_000),
+        'gpt-4.1-nano': OpenAILimits(rpm=5000, tpm=2_000_000)
     },
     'tier 3': {
         'gpt-4o': OpenAILimits(rpm=5000, tpm=800_000),
@@ -68,6 +70,7 @@ OPENAI_LIMITS = {
         'gpt-4-turbo': OpenAILimits(rpm=5000, tpm=600_000),
         'gpt-4': OpenAILimits(rpm=5000, tpm=80_000),
         'gpt-3.5-turbo': OpenAILimits(rpm=3500, tpm=4_000_000),
+        'gpt-4.1-nano': OpenAILimits(rpm=5000, tpm=4_000_000)
     },
     'tier 4': {
         'gpt-4o': OpenAILimits(rpm=10_000, tpm=2_000_000),
@@ -75,6 +78,7 @@ OPENAI_LIMITS = {
         'gpt-4-turbo': OpenAILimits(rpm=10_000, tpm=800_000),
         'gpt-4': OpenAILimits(rpm=10_000, tpm=300_000),
         'gpt-3.5-turbo': OpenAILimits(rpm=10_000, tpm=10_000_000),
+        'gpt-4.1-nano': OpenAILimits(rpm=10_000, tpm=10_000_000)
     },
     'tier 5': {
         'gpt-4o': OpenAILimits(rpm=10_000, tpm=30_000_000),
@@ -82,6 +86,7 @@ OPENAI_LIMITS = {
         'gpt-4-turbo': OpenAILimits(rpm=10_000, tpm=2_000_000),
         'gpt-4': OpenAILimits(rpm=10_000, tpm=1_000_000),
         'gpt-3.5-turbo': OpenAILimits(rpm=10_000, tpm=50_000_000),
+        'gpt-4.1-nano': OpenAILimits(rpm=30_000, tpm=150_000_000)
     },
 }
 
