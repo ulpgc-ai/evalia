@@ -51,10 +51,12 @@ class ClaudeManager(LanguageModelManager):
         comment_bad_answer = '"comment": "1+1 is not equal to 3"' if justified_answers else ''
         comment_good_answer = '"comment": "1+1 is equal to 2"' if justified_answers else ''
         prompt = f"""
-            Analyze these answers and output in JSON format (encode special chars properly) with keys: 
+            Analyze these answers and output in JSON format (escape special chars properly) with keys: 
             "results" (list of dicts with "index" (0, 1, 2, ..., this is the index of the answer in the list), 
             "score" (float)
             {comment_additional_field}.
+            Remember to escape special characters in JSON, such as " (double quotes), \ (backslash), \n (newline), \t (tab), and \r (carriage return), 
+            to ensure proper syntax and avoid parsing errors.
             Example of expected output:
             {{
                 "results": [
