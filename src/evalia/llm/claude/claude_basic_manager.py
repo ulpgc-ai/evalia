@@ -16,7 +16,7 @@ class ClaudeBasicManager(ClaudeManager):
                 model=self.model,
                 messages=self.convert_to_claude_messages(query, initial_prompt),
                 system=system_context,
-                max_tokens=1000,
+                max_tokens=4096,
                 temperature=self.temperature
             )
             elapsed_time = time.time() - start_time
