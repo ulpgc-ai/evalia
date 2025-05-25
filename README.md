@@ -144,13 +144,6 @@ Por defecto, la columna "Respuesta completa GPT" tiene el texto de GPT,
 sin procesar. La columna "Calificación GPT" tiene el texto, quitándole
 el número de índice de la respuesta.
 
-El programador puede sobreescribir el método
-`Evaluator.postprocess_one_gpt_response()` para procesar la respuesta
-de GPT y obtener una calificación sencilla, que irá a 
-la columna "Calificación GPT". 
-El ejemplo [ejemplo03.py](examples/example03_gpt.py) tiene una muestra de cómo
-hacer ese tratamiento.
-
 ### Agrupar las peticiones en lotes (query_batch_length)
 
 El parámetro `query_batch_length` indica cómo se empaquetan las peticiones a GPT. 

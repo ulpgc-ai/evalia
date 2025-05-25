@@ -25,7 +25,6 @@ class Evaluator:
                   prompt: PromptSource = None,
                   sample_selector: int | slice | list | Callable = None,
                   query_batch_length: int = 20,
-                  postprocess_one_llm_response: Callable[[str], str | int] = lambda text: text,
                   persistent: bool = False
                   ):
         """
@@ -35,10 +34,8 @@ class Evaluator:
         :param answers_dataframe: the DataFrame with the student responses. At least one column with the student responses is required.
         :param responses_column: the index of the column with the student responses in the DataFrame. It can be an integer or a string. By default, it is the first column of the DataFrame.
         :param prompt: context for the LLM. Normally containing instructions for the LLM.
-        :param sample_selector: the range of responses to be selected from the DataFrame. It can be a slice (e.g. slice(0,15)), a list of indices (e.g. [1,7,99]),
-        an integer N that will be used to take a random sample of N responses, or a Callable object (e.g. a lambda expression). If set to None, all responses are selected.
+        :param sample_selector: the range of responses to be selected from the DataFrame. It can be a slice (e.g. slice(0,15)), a list of indices (e.g. [1,7,99]), an integer N that will be used to take a random sample of N responses, or a Callable object (e.g. a lambda expression). If set to None, all responses are selected.
         :param query_batch_length: the number of responses that will be packed in each query to each LLM. Any integer value greater than 0 is valid.
-        :param postprocess_one_llm_response: a function to postprocess the response from the LLM. It should take a string as input and return a string as output.
         :param persistent: if True, the evaluator will be saved to a file after executing the tasks, and can be loaded in a subsequent execution.
         """
         if persistent:
@@ -74,7 +71,6 @@ class Evaluator:
             raise TypeError("Tipo de columna de respuestas no soportado.")
 
         self.query_batch_length = query_batch_length
-        self.postprocess_one_llm_response = postprocess_one_llm_response
         self.persistent = persistent
 
         logger.info(f'"{self.evaluator_id}" created')
@@ -112,12 +108,10 @@ class Evaluator:
 
     def __getstate__(self):
         state = self.__dict__.copy()
-        state['postprocess_one_llm_response'] = None
         return state
 
     def __setstate__(self, state):
         self.__dict__.update(state)
-        self.postprocess_one_llm_response = lambda x: x
 
     def partition_batches(self, responses) -> List[str]:
         """ Divides the responses into batches according to `self.query_batch_length` """
@@ -179,6 +173,7 @@ class Evaluator:
 
     @staticmethod
     def _add_evaluation_columns_to_dataframe(df: pd.DataFrame, evaluated_answers: List[EvaluatedAnswer], manager_name: str):
+        print(evaluated_answers)
         df[COLNAME_AI_GRADES + manager_name] = [x.score for x in evaluated_answers]
         df[COLNAME_AI_FULL_EVALUATIONS + manager_name] = [x.comment for x in evaluated_answers]
 

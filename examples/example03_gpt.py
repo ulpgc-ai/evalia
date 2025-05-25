@@ -1,10 +1,5 @@
 '''
 EJEMPLO 3. Evaluar capitales europeas.
-Partiendo del ejemplo 2 (repuesta JSON con comentarios),
-usamos el método Evaluator.postprocess_one_gpt_response() para
-extraer la calificación numérica y depositarla en la columna
-"Calificación GPT".
-
 Este ejemplo utiliza la API por lotes de OpenAI (Batch API).
 '''
 
@@ -61,7 +56,6 @@ evaluator = Evaluator(
             answers_dataframe= pd.DataFrame(respuestas_estudiantes),
             prompt= PromptFromString(PROMPT),
             query_batch_length=20,
-            postprocess_one_llm_response= lambda text: text[0],
             managers = [
                 GPTBatchManager(model=MODELO_GPT),
             ],

@@ -46,7 +46,6 @@ evaluator = Evaluator(
             answers_dataframe= pd.DataFrame(respuestas_estudiantes),
             prompt= PromptFromString(PROMPT),
             query_batch_length=20,
-            postprocess_one_llm_response= lambda text: text[0],
             managers = [
                 GeminiBatchManager(model="gemini-2.0-flash-001"),
                 ClaudeBatchManager(model="claude-3-5-haiku-latest"),

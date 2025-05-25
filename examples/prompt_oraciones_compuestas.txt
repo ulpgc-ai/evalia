@@ -1,17 +1,19 @@
 Por cada oración que te pase, tienes que contar el número de verbos conjugados que contiene y el número de conectores (conjunciones o pronombres relativos) en caso de que sea una oración compuesta. En tu respuesta no des más explicaciones.
-Tu respuesta debe tener este formato: <índice de respuesta>. <verbos y conectores>.
-Aquí te doy varios ejemplos con sus respuestas correctas.
+Debes puntuar con un 1 si el número de verbos es mayor o igual que 2, y el número de conectores es mayor o igual que 1. Si no se cumplen estas condiciones, se puntúa con un 0.
+Como comentario adicional, debes seguir el siguiente formato: "número de verbos identificados (nombrar los verbos), número de conectores identificados (nombrar los conectores). Por ejemplo: "1 verbo (está), 1 conector (porque)""
 
-1. El deporte femenino de hecho está de moda porque... / 1 verbo (está), 1 conector (porque).
-2. Estos últimos años el deporte femenino ha ganado fama y ahora está de moda. / 2 verbos (ha ganado, está), 1 conector (y)
-3. Actualmente, el deporte femenino está muy de moda. / 1 verbo (está), 0 conectores.
-4. El deporte que es femenino está de moda. / 2 verbos (es, está), 1 conector (que).
-5. Hoy en día, se suele escuchar que el deporte femenino está de moda / 2 verbos (suele, está), 1 conector (que)
-6. El deporte femenino esta y estara muy de moda / 2 verbos (está, estará), 1 conector (y).
-7. Hacer deporte femenino, está de moda y muy infravalorado / 1 verbo (está), 0 conectores.
-8. El deporte femenino esta de moda, desde que lo transmiten mas por la television / 2 verbos(esta,trasmiten), 1 conector (desde que)
-9. El deporte femenino está de moda, pero la igualdad está por llegar. / 2 verbos (está, está), 1 conector (pero).
-10. El deporte femenino está moda, ya que, cada vez hay más apoyo. / 2 verbos (está, hay), 1 conector (ya que).
-11. En mi opinión, la modalidad de deporte femenino, por una parte esta de moda en los deportes que más destacan, pero por otra parte el deporte femenino en algunas modalidades no tiene muchos seguidores. / 3 verbos (esta,destacan,tiene), 2 conectores (por una parte, pero).
+Aquí te doy varios ejemplos de respuestas evaluadas por los humanos (este no es el formato de respuesta que debes seguir, es solo un ejemplo para que entiendas cómo calificar):
+
+El deporte femenino de hecho está de moda porque... / Calificación: 1 (1 verbo: está, 1 conector: porque).
+Estos últimos años el deporte femenino ha ganado fama y ahora está de moda. / Calificación: 1 (2 verbos: ha ganado, está, 1 conector: y).
+Actualmente, el deporte femenino está muy de moda. / Calificación: 0 (1 verbo: está, 0 conectores).
+El deporte que es femenino está de moda. / Calificación: 1 (2 verbos: es, está, 1 conector: que).
+Hoy en día, se suele escuchar que el deporte femenino está de moda / Calificación: 1 (2 verbos: suele, está, 1 conector: que).
+El deporte femenino esta y estara muy de moda / Calificación: 1 (2 verbos: está, estará, 1 conector: y).
+Hacer deporte femenino, está de moda y muy infravalorado / Calificación: 0 (1 verbo: está, 0 conectores).
+El deporte femenino esta de moda, desde que lo transmiten mas por la television / Calificación: 1 (2 verbos: está, transmiten, 1 conector: desde que).
+El deporte femenino está de moda, pero la igualdad está por llegar. / Calificación: 1 (2 verbos: está, está, 1 conector: pero).
+El deporte femenino está moda, ya que, cada vez hay más apoyo. / Calificación: 1 (2 verbos: está, hay, 1 conector: ya que).
+En mi opinión, la modalidad de deporte femenino, por una parte esta de moda en los deportes que más destacan, pero por otra parte el deporte femenino en algunas modalidades no tiene muchos seguidores. / Calificación: 1 (3 verbos: está, destacan, tiene, 2 conectores: por una parte, pero).
 
 ¿Entendidas las instrucciones?

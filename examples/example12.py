@@ -37,26 +37,6 @@ respuestas_estudiantes = {
 PROMPT_FILE = "./prompt_oraciones_compuestas.txt"
 prompt = PromptFromTextFile(PROMPT_FILE)
 
-def postprocess_one_gpt_response(text):
-        """
-        Calcula si una respuesta de GPT está OK o no:
-        - al menos 2 verbos
-        - al menos 1 conector
-        Ejemplos de textos:
-        20. 2 verbos (piensa, está), 1 conector (que).
-        21. 1 verbo (estaba), 0 conectores.
-        """
-        try:
-            text=str.lower(text)
-            str_verbos = re.findall(r'(\d+)\s+(?:verbo)', text)
-            nverbos = 0 if not str_verbos else int(str_verbos[0])
-            str_conectores = re.findall(r'(\d+)\s+(?:conector)', text)
-            nconectores = 0 if not str_conectores else int(str_conectores[0])
-            return int(nverbos>=2 and nconectores>=1)
-        except:
-            return None
-        
-
 evaluator = Evaluator(
     evaluator_id = "oraciones_compuestas",
     answers_dataframe= pd.DataFrame(respuestas_estudiantes),
@@ -64,8 +44,7 @@ evaluator = Evaluator(
     managers = [
         GPTSmartManager(model=MODELO_GPT)
     ],
-    query_batch_length=20,
-    postprocess_one_llm_response = lambda text: postprocess_one_gpt_response(text),
+    query_batch_length=20
 )
 
 df_result = evaluator.evaluate_answers()
