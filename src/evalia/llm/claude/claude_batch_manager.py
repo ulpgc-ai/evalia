@@ -23,11 +23,11 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
         for query in query_list:
             requests.append(
                 Request(
-                    custom_id=query_id,
+                    custom_id=query_id + "_" + str(len(requests) + 1),
                     params=MessageCreateParamsNonStreaming(
                         model=self.model,
                         max_tokens=1024,
-                        messages=self.convert_to_claude_messages(query, initial_prompt, system_context),
+                        messages=self.convert_to_claude_messages(query, initial_prompt),
                         system=system_context,
                         temperature=self.temperature
                     )
