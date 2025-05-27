@@ -152,6 +152,8 @@ class Evaluator:
         The responses are processed and the evaluations are extracted.
         :return: a DataFrame which is the same as the sample, but with two additional columns at the end: a column with the score and a column with the evaluation description.
         """
+        if self.managers is None or len(self.managers) == 0:
+            raise ValueError("No managers have been added to the evaluator. Please add at least one manager before running the evaluation.")
         df = self.answers_dataframe.copy()
         for manager in self.managers:
             system_context, initial_prompt = self.prompt.get_prompt()
