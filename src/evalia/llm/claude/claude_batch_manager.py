@@ -13,8 +13,8 @@ from evalia.llm.claude import ClaudeManager
 
 class ClaudeBatchManager(ClaudeManager, BatchManager):
 
-    def __init__(self, model: str):
-        super().__init__(model=model)
+    def __init__(self, model: str, temperature: float = 0.0):
+        super().__init__(model=model, temperature = temperature)
 
     def start_task(self, query_id: str, initial_prompt: str, query_list: List[str], system_context: str = "") -> LanguageModelTask:
         if self.task is not None:
