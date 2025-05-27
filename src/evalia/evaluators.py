@@ -171,11 +171,15 @@ class Evaluator:
         logger.info(f'"{self.evaluator_id}" run successfully')
         return df
 
+    import pandas as pd
+
     @staticmethod
     def _add_evaluation_columns_to_dataframe(df: pd.DataFrame, evaluated_answers: List[EvaluatedAnswer], manager_name: str):
-        print(evaluated_answers)
-        df[COLNAME_AI_GRADES + manager_name] = [x.score for x in evaluated_answers]
-        df[COLNAME_AI_FULL_EVALUATIONS + manager_name] = [x.comment for x in evaluated_answers]
+        indexed_scores = {x.index: x.score for x in evaluated_answers}
+        df[COLNAME_AI_GRADES + manager_name] = df.index.map(indexed_scores)
+        if all(isinstance(x, EvaluatedJustifiedAnswer) for x in evaluated_answers):
+            indexed_comments = {x.index: x.comment for x in evaluated_answers}
+            df[COLNAME_AI_FULL_EVALUATIONS + manager_name] = df.index.map(indexed_comments)
 
     @staticmethod
     def _convert_to_evaluated_answers(llm_responses: List[LanguageModelResponse], structured_output_class):
