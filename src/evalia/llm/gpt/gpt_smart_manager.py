@@ -295,25 +295,6 @@ class GPTSmartManager(GPTManager, SmartManager):
             "elapsed_time": elapsed_time
             }
 
-    @staticmethod
-    def create_openai_message(role: Literal['user', 'system'], prompt: str) -> Union[
-        ChatCompletionDeveloperMessageParam,
-        ChatCompletionSystemMessageParam,
-        ChatCompletionUserMessageParam,
-        ChatCompletionAssistantMessageParam,
-        ChatCompletionToolMessageParam,
-        ChatCompletionFunctionMessageParam,
-    ]:
-        return {
-            "role": role,
-            "content": [
-                {
-                    "type": "text",
-                    "text": prompt
-                }
-            ]
-        }
-
     def __getstate__(self):
         state = super().__getstate__()
         state["encoding"] = None
