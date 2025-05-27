@@ -122,7 +122,7 @@ class Evaluator:
             batch = responses.iloc[i:i + self.query_batch_length]
             message = ""
             for index, answer in batch.items():
-                message += f'[ {index}, {answer} ]\n'
+                message += f'[ index: {index}, answer: {answer} ]\n'
             batches.append(message)
 
         return batches
