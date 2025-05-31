@@ -50,7 +50,7 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
             match batch_result.result.type:
                 case "succeeded":
                     llm_responses.append(LanguageModelResponse(
-                        response = batch_result.result.message.content[0].text,
+                        response = ClaudeManager.parse_claude_response(batch_result.result.message),
                         elapsed_time = ClaudeBatchManager.calculate_waited_time_seconds(batch_retrieved.created_at),
                         input_tokens = batch_result.result.message.usage.input_tokens,
                         output_tokens= batch_result.result.message.usage.output_tokens

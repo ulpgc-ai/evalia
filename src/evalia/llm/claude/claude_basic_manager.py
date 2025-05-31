@@ -1,5 +1,8 @@
+import json
 import time
 from typing import List
+
+import yaml
 
 from evalia.llm import LanguageModelTask, LanguageModelResponse
 from evalia.llm.claude.claude_manager import ClaudeManager
@@ -21,7 +24,7 @@ class ClaudeBasicManager(ClaudeManager):
             )
             elapsed_time = time.time() - start_time
             responses.append(LanguageModelResponse(
-                response=self.parse_claude_response(response.content[0].text),
+                response=ClaudeManager.parse_claude_response(response),
                 input_tokens=response.usage.input_tokens,
                 output_tokens=response.usage.output_tokens,
                 elapsed_time=elapsed_time

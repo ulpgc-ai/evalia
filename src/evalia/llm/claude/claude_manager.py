@@ -3,7 +3,8 @@ from abc import abstractmethod
 from typing import List, Literal, Type
 
 import anthropic
-from anthropic.types import MessageParam
+import yaml
+from anthropic.types import MessageParam, Message
 from pydantic import BaseModel
 
 from evalia.llm import LanguageModelManager, LanguageModelTask, LanguageModelResponse
@@ -36,62 +37,28 @@ class ClaudeManager(LanguageModelManager):
         """
         return [
             ClaudeManager.create_claude_input_message("user", initial_prompt),
-            self.generate_json_structure_prompt(),
-            ClaudeManager.create_claude_input_message("assistant",
-                                                      "Sí, he entendido las instrucciones. Pásame las respuestas para evaluar."),
-            ClaudeManager.create_claude_input_message("user", query)
+            self.generate_yaml_structure_prompt(),
+            ClaudeManager.create_claude_input_message("user", query),
+            ClaudeManager.create_claude_input_message("assistant", "results:"),
         ]
 
-    def generate_json_structure_prompt(self) -> MessageParam:
+    def generate_yaml_structure_prompt(self) -> MessageParam:
         """
-        Generate a string representing the JSON format expected, based on the structured_output_class.
+        Generate a string representing the YAML format expected, based on the structured_output_class.
         """
         justified_answers = self.structured_output_class is EvaluatedJustifiedAnswers
         comment_additional_field = 'and "comment" (required string), this is a justification of the score' if justified_answers else ''
-        comment_bad_answer = '"comment": "1+1 is not equal to 3"' if justified_answers else ''
-        comment_good_answer = '"comment": "1+1 is equal to 2"' if justified_answers else ''
         prompt = f"""
-            Analyze these answers and output in JSON format with keys: 
+            Output in YAML format with keys: 
             "results" (list of dicts with "index" (0, 1, 2, ..., this is the index of the answer in the list), 
-            "score" (float)
-            {comment_additional_field}.
-            Remember to escape special characters in JSON, such as " (double quotes), \ (backslash), \n (newline), \t (tab), and \r (carriage return), 
-            to ensure proper syntax and avoid parsing errors. Whenever you use double quotes in the JSON, make sure to escape them with a backslash.
-            Example of expected output:
-            {{
-                "results": [
-                    {{
-                        "index": 0,
-                        "score": 0
-                        {comment_bad_answer}
-                    }},
-                    {{
-                        "index": 1,
-                        "score": 1
-                        {comment_good_answer}
-                    }}
-                ]
-            }}            
+            "score" (float) {comment_additional_field}. Use block scalars (`|`) to format multi-line strings properly. Do not use inline strings for comments.
+            Here are the answers (JUST EVALUATE THEM):             
         """
         return self.create_claude_input_message("user", prompt)
 
     @staticmethod
-    def is_valid_json(input_string: str) -> bool:
-        try:
-            json.loads(input_string)
-            return True
-        except json.JSONDecodeError:
-            return False
-
-    @staticmethod
-    def parse_claude_response(raw: str) -> str:
-        if ClaudeManager.is_valid_json(raw):
-            return raw
-        raw = raw.strip('"')
-        if ClaudeManager.is_valid_json(raw):
-            return raw
-        else:
-            raise ValueError("No se pudo parsear correctamente la respuesta de Claude.")
+    def parse_claude_response(response: Message) -> str:
+        return json.dumps(yaml.safe_load("results: " + response.content[0].text))
 
     def __getstate__(self):
         state = self.__dict__.copy()
