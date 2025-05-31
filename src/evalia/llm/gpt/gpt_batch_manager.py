@@ -6,6 +6,8 @@ El sistema devuelve las respuestas de GPT.
 """
 
 from typing import List
+
+from openai.types import Batch
 from openai.types.chat.chat_completion import ChatCompletion
 from evalia.llm import LanguageModelTask, LanguageModelResponse, BatchManager
 import os
@@ -137,7 +139,7 @@ class GPTBatchManager(GPTManager, BatchManager):
             return self.responses
         start_time = time.time()
         batch_id = task.id
-        batch_object = self.client.batches.retrieve(batch_id)
+        batch_object: Batch = self.client.batches.retrieve(batch_id)
 
         # Wait until batch reaches a final state or timeout is reached
         running_states = ["validating", "in_progress", "finalizing", "cancelling"]
@@ -167,16 +169,8 @@ class GPTBatchManager(GPTManager, BatchManager):
             ChatCompletion.model_validate(r) 
             for r in dict_responses
             ]
-        
-        # calculate stats
-        final_times = [ 
-            batch_object.cancelled_at, 
-            batch_object.completed_at,
-            batch_object.expired_at,
-            batch_object.failed_at,
-        ]
-        end_time = max([ t for t in final_times if t is not None ])
-        elapsed_time = end_time - batch_object.created_at
+
+        elapsed_time = batch_object.completed_at - batch_object.created_at
 
         lm_responses = []
         for r in openai_responses:
