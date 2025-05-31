@@ -51,7 +51,7 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
                 case "succeeded":
                     llm_responses.append(LanguageModelResponse(
                         response = ClaudeManager.parse_claude_response(batch_result.result.message),
-                        elapsed_time = ClaudeBatchManager.calculate_waited_time_seconds(batch_retrieved.created_at),
+                        elapsed_time = ClaudeBatchManager.calculate_waited_time_seconds(batch_retrieved.created_at, batch_retrieved.ended_at),
                         input_tokens = batch_result.result.message.usage.input_tokens,
                         output_tokens= batch_result.result.message.usage.output_tokens
                     ))
@@ -66,8 +66,8 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
         return self.responses
 
     @staticmethod
-    def calculate_waited_time_seconds(created_at: datetime):
-        return round((datetime.now(timezone.utc) - created_at).total_seconds(), 3)
+    def calculate_waited_time_seconds(created_at: datetime, ended_at: datetime):
+        return round((ended_at - created_at).total_seconds(), 3)
 
     def cancel_task(self, task: LanguageModelTask):
         self.client.messages.batches.cancel(task.id)
