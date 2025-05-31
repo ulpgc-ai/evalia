@@ -6,7 +6,7 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evalia.evaluators import Evaluator
+from evalia.evaluator import Evaluator
 from evalia.llm.evaluated_answer import EvaluatedAnswers
 from evalia.llm.gemini import GeminiBasicManager
 from evalia.llm.claude import ClaudeBasicManager

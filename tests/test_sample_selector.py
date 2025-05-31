@@ -3,7 +3,7 @@ import sys
 import os
 sys.path.append('.')
 import pandas as pd
-from evalia.evaluators import Evaluator
+from evalia.evaluator import Evaluator
 
 class TestSampleSelector(unittest.TestCase):
 

@@ -1,7 +1,7 @@
 import unittest
 
 import pandas as pd
-from evalia.evaluators import Evaluator
+from evalia.evaluator import Evaluator
 from evalia.prompts import PromptFromString
 from evalia.llm.gpt import GPTMockManager
 

@@ -9,7 +9,7 @@ import os
 import re
 
 # Evaluador automático
-from evalia.evaluators import Evaluator
+from evalia.evaluator import Evaluator
 from evalia.llm.gpt import GPTSmartManager
 
 # Para leer prompts desde ficheros de texto

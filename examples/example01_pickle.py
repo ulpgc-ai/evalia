@@ -6,7 +6,7 @@ import pandas as pd
 import os
 
 # Clase para evaluador automático
-from evalia.evaluators import Evaluator
+from evalia.evaluator import Evaluator
 from evalia.llm.gpt import GPTBatchManager
 
 # Para leer prompts desde cadenas de texto
