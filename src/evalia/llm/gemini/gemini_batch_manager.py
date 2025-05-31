@@ -152,7 +152,7 @@ class GeminiBatchManager(GeminiManager, BatchManager):
         json_dict = self.find_json_in_gcs()
         llm_responses.append(LanguageModelResponse(
             response = json_dict['response']['candidates'][0]['content']['parts'][0]['text'],
-            elapsed_time = round(job.update_time.timestamp() - job.create_time.timestamp(), 3),
+            elapsed_time = round(job.end_time.timestamp() - job.create_time.timestamp(), 3),
             input_tokens = json_dict['response']['usageMetadata']['promptTokenCount'],
             output_tokens = json_dict['response']['usageMetadata']['candidatesTokenCount'],
         ))
