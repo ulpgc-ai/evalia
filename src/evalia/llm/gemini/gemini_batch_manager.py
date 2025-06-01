@@ -80,7 +80,7 @@ class GeminiBatchManager(GeminiManager, BatchManager):
                             {"text": system_context}
                         ]
                     }
-            f.write(json.dumps(request_obj) + "\n")
+                f.write(json.dumps(request_obj) + "\n")
         return file_name
 
     @staticmethod
