@@ -52,7 +52,7 @@ class ClaudeManager(LanguageModelManager):
             Output in YAML format with keys: 
             "results" (list of dicts with "index" (0, 1, 2, ..., this is the index of the answer in the list), 
             "score" (float){comment_additional_field}
-            Here are the answers (JUST EVALUATE THEM):             
+            Don't send additional messages, just the YAML output.             
         """
         return self.create_claude_input_message("user", prompt)
 
