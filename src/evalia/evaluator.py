@@ -10,6 +10,7 @@ from evalia.logs import get_logger
 from evalia.prompts import PromptSource
 from evalia.llm import LanguageModelManager, LanguageModelResponse, EvaluatedJustifiedAnswer
 from evalia.config import cache_dir
+from evalia.utils import clean_illegal_chars
 
 # Columns added by the automatic evaluator to the response DataFrame
 COLNAME_AI_GRADES = "evaluación "
@@ -180,7 +181,9 @@ class Evaluator:
         df[COLNAME_AI_GRADES + manager_name] = df.index.map(indexed_scores)
         if all(isinstance(x, EvaluatedJustifiedAnswer) for x in evaluated_answers):
             indexed_comments = {x.index: x.comment for x in evaluated_answers}
-            df[COLNAME_AI_FULL_EVALUATIONS + manager_name] = df.index.map(indexed_comments)
+            df[COLNAME_AI_FULL_EVALUATIONS + manager_name] = df.index.map(
+                lambda idx: clean_illegal_chars(indexed_comments.get(idx, ""))
+            )
 
     @staticmethod
     def _convert_to_evaluated_answers(llm_responses: List[LanguageModelResponse], structured_output_class):
