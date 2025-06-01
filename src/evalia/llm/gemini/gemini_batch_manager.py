@@ -147,30 +147,35 @@ class GeminiBatchManager(GeminiManager, BatchManager):
                 break
         if job.state != JobState.JOB_STATE_SUCCEEDED:
             raise Exception(f"Batch {task.id} failed: {job.errors}")
-
+        batch_elapsed_time = round(job.end_time.timestamp() - job.create_time.timestamp(), 3)
         llm_responses: List[LanguageModelResponse] = []
-        json_dict = self.find_json_in_gcs()
-        llm_responses.append(LanguageModelResponse(
-            response = json_dict['response']['candidates'][0]['content']['parts'][0]['text'],
-            elapsed_time = round(job.end_time.timestamp() - job.create_time.timestamp(), 3),
-            input_tokens = json_dict['response']['usageMetadata']['promptTokenCount'],
-            output_tokens = json_dict['response']['usageMetadata']['candidatesTokenCount'],
-        ))
+        json_list = self.find_json_list_in_gcs()
+        for json_dict in json_list:
+            llm_responses.append(LanguageModelResponse(
+                response = json_dict['response']['candidates'][0]['content']['parts'][0]['text'],
+                elapsed_time = batch_elapsed_time / len(json_list),
+                input_tokens = json_dict['response']['usageMetadata']['promptTokenCount'],
+                output_tokens = json_dict['response']['usageMetadata']['candidatesTokenCount'],
+            ))
         self.responses = llm_responses
         return llm_responses
 
-    def find_json_in_gcs(self):
+    def find_json_list_in_gcs(self):
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
         blobs = bucket.list_blobs(prefix=self.output_uri)
+        json_list = []
         for blob in blobs:
             if blob.name.endswith(".jsonl"):
                 content = blob.download_as_text()
                 for line in content.splitlines():
                     try:
-                        result = json.loads(line)
-                        return result
+                        json_list.append(json.loads(line))
                     except json.JSONDecodeError as e:
                         print(f"Error al decodificar JSON en la línea: {line} - {e}")
+            if len(json_list) > 0:
+                print(f"Encontrado {len(json_list)} archivos JSONL en el bucket {self.bucket_name} con prefijo {self.output_uri}.")
+                break
+        return json_list
 
     def cancel_task(self, task: LanguageModelTask):
         self.client.batches.cancel(name=task.id)
