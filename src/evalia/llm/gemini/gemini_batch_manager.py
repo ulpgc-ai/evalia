@@ -149,7 +149,7 @@ class GeminiBatchManager(GeminiManager, BatchManager):
             raise Exception(f"Batch {task.id} failed: {job.errors}")
         batch_elapsed_time = round(job.end_time.timestamp() - job.create_time.timestamp(), 3)
         llm_responses: List[LanguageModelResponse] = []
-        json_list = self.find_json_list_in_gcs()
+        json_list = self.find_jsonl_in_gcs(job.dest.gcs_uri)
         for json_dict in json_list:
             llm_responses.append(LanguageModelResponse(
                 response = json_dict['response']['candidates'][0]['content']['parts'][0]['text'],
@@ -160,9 +160,9 @@ class GeminiBatchManager(GeminiManager, BatchManager):
         self.responses = llm_responses
         return llm_responses
 
-    def find_json_list_in_gcs(self):
+    def find_jsonl_in_gcs(self, gcs_uri: str):
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
-        blobs = bucket.list_blobs(prefix=self.output_uri)
+        blobs = bucket.list_blobs(prefix=gcs_uri.replace("gs://", "").split("/", 1)[1])
         json_list = []
         for blob in blobs:
             if blob.name.endswith(".jsonl"):
@@ -173,7 +173,7 @@ class GeminiBatchManager(GeminiManager, BatchManager):
                     except json.JSONDecodeError as e:
                         print(f"Error al decodificar JSON en la línea: {line} - {e}")
             if len(json_list) > 0:
-                print(f"Encontrado {len(json_list)} archivos JSONL en el bucket {self.bucket_name} con prefijo {self.output_uri}.")
+                print(f"Extraídos {len(json_list)} JSON del archivo JSONL {blob.name}")
                 break
         return json_list
 
