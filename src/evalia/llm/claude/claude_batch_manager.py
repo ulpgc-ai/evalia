@@ -46,12 +46,14 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
             time.sleep(retry)
             batch_retrieved = self.client.messages.batches.retrieve(task.id)
         llm_responses: List[LanguageModelResponse] = []
-        for batch_result in self.client.messages.batches.results(task.id):
+        batch_elapsed_time = ClaudeBatchManager.calculate_waited_time_seconds(batch_retrieved.created_at, batch_retrieved.ended_at)
+        batch_results = self.client.messages.batches.results(task.id)
+        for batch_result in batch_results:
             match batch_result.result.type:
                 case "succeeded":
                     llm_responses.append(LanguageModelResponse(
                         response = ClaudeManager.parse_claude_response(batch_result.result.message),
-                        elapsed_time = ClaudeBatchManager.calculate_waited_time_seconds(batch_retrieved.created_at, batch_retrieved.ended_at),
+                        elapsed_time =batch_elapsed_time / batch_retrieved.request_counts.succeeded,
                         input_tokens = batch_result.result.message.usage.input_tokens,
                         output_tokens= batch_result.result.message.usage.output_tokens
                     ))
