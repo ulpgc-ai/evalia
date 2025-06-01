@@ -76,6 +76,7 @@ class GPTBatchManager(GPTManager, BatchManager):
             # Generate the schema from the structured_output_class
             schema = self.structured_output_class.model_json_schema()
             schema["additionalProperties"] = False
+            GPTBatchManager.set_additional_properties_false(schema)
             schema_dict = {
                 "name": self.structured_output_class.__name__,
                 "strict": True,
@@ -119,6 +120,28 @@ class GPTBatchManager(GPTManager, BatchManager):
             assert file_size <= MAX_BATCH_SIZE, \
                 f"File size {file_size} exceeds limit {MAX_BATCH_SIZE}"
             return jsonl_filename
+
+    @staticmethod
+    def set_additional_properties_false(schema: dict):
+        """
+        Recorre recursivamente un esquema JSON para establecer additionalProperties: false en todos los objetos.
+        """
+        if not isinstance(schema, dict):
+            return
+
+        if schema.get("type") == "object":
+            schema["additionalProperties"] = False
+            for prop in schema.get("properties", {}).values():
+                GPTBatchManager.set_additional_properties_false(prop)
+
+        if schema.get("type") == "array" and "items" in schema:
+            GPTBatchManager.set_additional_properties_false(schema["items"])
+
+        # Recorre los $defs (o definitions) también
+        for def_section in ("$defs", "definitions"):
+            if def_section in schema:
+                for def_schema in schema[def_section].values():
+                    GPTBatchManager.set_additional_properties_false(def_schema)
 
     def cancel_task(self, task: LanguageModelTask):
         self.client.batches.cancel(task.id)
