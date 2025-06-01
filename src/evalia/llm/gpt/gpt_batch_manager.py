@@ -199,7 +199,7 @@ class GPTBatchManager(GPTManager, BatchManager):
         for r in openai_responses:
             lm_responses.append(LanguageModelResponse(
                 response=r.choices[0].message.content,
-                elapsed_time=elapsed_time,
+                elapsed_time=elapsed_time / len(openai_responses),
                 input_tokens=r.usage.prompt_tokens,
                 output_tokens=r.usage.completion_tokens,
             ))
