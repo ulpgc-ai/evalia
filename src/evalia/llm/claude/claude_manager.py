@@ -47,11 +47,11 @@ class ClaudeManager(LanguageModelManager):
         Generate a string representing the YAML format expected, based on the structured_output_class.
         """
         justified_answers = self.structured_output_class is EvaluatedJustifiedAnswers
-        comment_additional_field = 'and "comment" (required string), this is a justification of the score' if justified_answers else ''
+        comment_additional_field = ', and "comment" (required string), this is a justification of the score. . Use block scalars (`|`) to format multi-line strings properly. Do not use inline strings for comments.' if justified_answers else '.'
         prompt = f"""
             Output in YAML format with keys: 
             "results" (list of dicts with "index" (0, 1, 2, ..., this is the index of the answer in the list), 
-            "score" (float) {comment_additional_field}. Use block scalars (`|`) to format multi-line strings properly. Do not use inline strings for comments.
+            "score" (float){comment_additional_field}
             Here are the answers (JUST EVALUATE THEM):             
         """
         return self.create_claude_input_message("user", prompt)
