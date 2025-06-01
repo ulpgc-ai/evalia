@@ -26,7 +26,7 @@ class ClaudeBatchManager(ClaudeManager, BatchManager):
                     custom_id=query_id + "_" + str(len(requests) + 1),
                     params=MessageCreateParamsNonStreaming(
                         model=self.model,
-                        max_tokens=1024,
+                        max_tokens=4096,
                         messages=self.convert_to_claude_messages(query, initial_prompt),
                         system=system_context,
                         temperature=self.temperature
