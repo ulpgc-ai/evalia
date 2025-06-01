@@ -137,13 +137,12 @@ class Evaluator:
 
     def _save_llm_responses(self, llm_responses: List[LanguageModelResponse], llm_name: str):
         try:
-            filename = os.path.join(cache_dir(), self.evaluator_id + f"_${llm_name}_responses.json")
-            json_llm_responses = [asdict(x) for x in llm_responses]
-            with open(filename,"w") as f:
-                json.dump(json_llm_responses,f,indent=2)
+            filename = os.path.join(cache_dir(), self.evaluator_id + f"_{llm_name}_responses.json")
+            json_llm_responses = [vars(x) for x in llm_responses]
+            with open(filename, "w") as f:
+                json.dump(json_llm_responses, f, indent=2)
         except Exception as e:
             logger.error(f"Error saving LLM responses: {e}")
-            raise
 
     def evaluate_answers(self) -> pd.DataFrame:
         """
