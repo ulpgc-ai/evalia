@@ -17,7 +17,7 @@ class ClaudeBasicManager(ClaudeManager):
             start_time = time.time()
             response = self.client.messages.create(
                 model=self.model,
-                messages=self.convert_to_claude_messages(query, initial_prompt),
+                messages=ClaudeManager.convert_to_claude_messages(query, initial_prompt),
                 system=system_context,
                 max_tokens=4096,
                 temperature=self.temperature
