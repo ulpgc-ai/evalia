@@ -13,15 +13,24 @@ from abc import ABC, abstractmethod
 import ast
 
 class PromptSource(ABC):
-    '''Clase base para cualquier fuente que produce un prompt inicial'''
+    """
+    Base class for any source that produces an initial prompt.
+    """
 
     @abstractmethod
     def get_prompt(self):
+        """
+        Gets a prompt suitable for input into a language model
+
+        :return: a tuple (system_context, initial_prompt)
+        """
         '''devuelve una cadena con un prompt apto para ingresar en GPT'''
         return None
 
 class PromptFromString(PromptSource):
-    '''La fuente del prompt es un texto en memoria'''
+    """
+    The prompt source is a string in memory.
+    """
 
     def __init__(self, prompt_text: str):
         self.prompt_text = prompt_text
@@ -36,7 +45,9 @@ class PromptFromString(PromptSource):
         return system_context, initial_prompt
 
 class PromptFromTextFile(PromptSource):
-    '''La fuente del prompt es un fichero de texto plano'''
+    """
+    The prompt source is a plain text file.
+    """
 
     def __init__(self, prompt_filename: str):
         self.prompt_filename = prompt_filename
@@ -48,9 +59,9 @@ class PromptFromTextFile(PromptSource):
         return prompt_preamble
 
 class PromptFromStringCoT(PromptSource):
-    '''La fuente del prompt es un texto en memoria.
-        Especialmente diseñado para Chain of Thought.
-    '''
+    """
+    The prompt source is a string in memory. Specially designed for Chain of Thought (CoT).
+    """
 
     def __init__(self,prompt_text):
         self.prompt_text = prompt_text
@@ -67,7 +78,9 @@ class PromptFromStringCoT(PromptSource):
 
 
 class PromptFromTextFileCoT(PromptSource):
-    '''Igual que PromptFromTextFile, pero con un prompt especial para CoT'''
+    """
+    The same as PromptFromTextFile, but with a special prompt for Chain of Thought (CoT).
+    """
     def __init__(self,prompt_filename):
         self.prompt_filename = prompt_filename
     
@@ -91,9 +104,9 @@ class PromptFromJSON(PromptSource):
         return prompt_preamble
 
 class PromptFromTemplate(PromptSource):
-    '''El prompt viene de un fichero de texto plano con parámetros
-    Los parámetros se rellenan en un JSON aparte
-    '''
+    """
+    The prompt comes from a plain text file with parameters. The parameters are filled in from a separate JSON file.
+    """
     def __init__(self,prompt_filename,args_filename):
         self.prompt_filename = prompt_filename
         self.args_filename = args_filename

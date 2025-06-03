@@ -3,6 +3,7 @@ from typing import List
 
 
 class SmartManager(ABC):
+    """Interface for managers that handle API restrictions."""
     @abstractmethod
     def count_tokens(self, messages: List[str]) -> int:
         """

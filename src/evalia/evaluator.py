@@ -1,4 +1,3 @@
-from dataclasses import asdict
 from typing import List, Self, Callable
 import pandas as pd
 import os
@@ -88,6 +87,7 @@ class Evaluator:
     def load_from_file(cls, evaluator_id: str) -> Self | None:
         """
         Load a serialized evaluator from a pickle file
+
         :param evaluator_id: The ID of the evaluator to load
         :return: The loaded evaluator or None if the file does not exist
         """
@@ -115,7 +115,11 @@ class Evaluator:
         self.__dict__.update(state)
 
     def partition_batches(self, responses) -> List[str]:
-        """ Divides the responses into batches according to `self.query_batch_length` """
+        """
+        Divides the responses into batches according to `self.query_batch_length`
+        :param responses: the responses to be divided into batches. It can be a list or a pandas Series.
+        :return: a list of strings, each string containing the student responses in the batch.
+        """
         total_responses = len(responses)
         batches = []
 
@@ -129,6 +133,9 @@ class Evaluator:
         return batches
 
     def print_stats(self):
+        """
+        For each manager, prints the statistics of the responses received from the LLM: total input tokens, total output tokens, and total elapsed time.
+        """
         for manager in self.managers:
             print(f"Stats for {manager.get_llm_name()}:")
             print(f"Input tokens: {sum(response.input_tokens for response in manager.responses)}")
@@ -150,6 +157,7 @@ class Evaluator:
         Evaluates the student responses using each LLM manager.
         For each manager, it builds the prompt and sends the requests to the LLM.
         The responses are processed and the evaluations are extracted.
+
         :return: a DataFrame which is the same as the sample, but with two additional columns at the end: a column with the score and a column with the evaluation description.
         """
         if self.managers is None or len(self.managers) == 0:
@@ -177,6 +185,12 @@ class Evaluator:
 
     @staticmethod
     def _add_evaluation_columns_to_dataframe(df: pd.DataFrame, evaluated_answers: List[EvaluatedAnswer], manager_name: str):
+        """
+        Adds the evaluation columns to the DataFrame with the scores and full evaluations.
+        :param df: the DataFrame with the student responses.
+        :param evaluated_answers: the list of EvaluatedAnswer objects returned by the LLM manager.
+        :param manager_name: the name of the LLM manager, used to differentiate the columns in the DataFrame.
+        """
         indexed_scores = {x.index: x.score for x in evaluated_answers}
         df[COLNAME_AI_GRADES + manager_name] = df.index.map(indexed_scores)
         if all(isinstance(x, EvaluatedJustifiedAnswer) for x in evaluated_answers):
@@ -186,7 +200,14 @@ class Evaluator:
             )
 
     @staticmethod
-    def _convert_to_evaluated_answers(llm_responses: List[LanguageModelResponse], structured_output_class):
+    def _convert_to_evaluated_answers(llm_responses: List[LanguageModelResponse], structured_output_class) -> List[EvaluatedAnswer]:
+        """
+        Converts the LLM responses to a list of EvaluatedAnswer objects.
+
+        :param llm_responses: List of LanguageModelResponse objects returned by the LLM manager.
+        :param structured_output_class: The class that defines the structured output of the evaluated answers, e.g. EvaluatedJustifiedAnswers.
+        :return:
+        """
         evaluated_answers: List[EvaluatedAnswer] = []
         text_messages = [x.response for x in llm_responses]
         for text_message in text_messages:
@@ -199,10 +220,10 @@ class Evaluator:
 def save_excel(df: pd.DataFrame, file_name: str, output_dir: str | None = None):
     """
     Saves a DataFrame to an Excel file with the same name as the evaluated item.
-    :param df: the DataFrame to save
+
+    :param df: the pd.DataFrame to save
     :param file_name: the name of the file (without extension)
     :param output_dir: the directory to save the file. If None, it will be saved in the current working directory.
-    :return:
     """
     if output_dir is None:
         base_path = file_name

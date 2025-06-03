@@ -253,9 +253,11 @@ class GPTSmartManager(GPTManager, SmartManager):
     def query(self, messages: List[dict]):
         """
         Send a query to the OpenAI API.
+
         A query is a list of messages, each message is a dictionary with the following keys:
         - name: name of the role
         - content: content of the message
+        :param messages: List of messages to be sent to the OpenAI API.
         """
 
         # Before sending the messages, check if the restrictions are met int the last minute

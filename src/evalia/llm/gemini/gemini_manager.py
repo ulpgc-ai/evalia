@@ -17,6 +17,12 @@ class GeminiManager(LanguageModelManager):
 
     @staticmethod
     def initialize_client(use_vertex: bool = False):
+        """
+        Initializes the Google GenAI client for interacting with Gemini's API.
+
+        :param use_vertex: If True, uses Vertex AI; otherwise, uses the standard API key.
+        :return: An instance of the Google GenAI client.
+        """
         if use_vertex:
             return genai.Client(vertexai=use_vertex)
         else:

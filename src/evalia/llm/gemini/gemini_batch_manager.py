@@ -48,10 +48,29 @@ class GeminiBatchManager(GeminiManager, BatchManager):
 
     @staticmethod
     def build_uri(bucket_name: str, destination_uri: str, query_id: str) -> str:
+        """
+        Builds the Google Cloud Storage URI for the batch job output. This URI is used to specify where the results of the batch job will be stored.
+
+        :param bucket_name: The name of the Google Cloud Storage bucket where the results will be stored.
+        :param destination_uri: The destination URI within the bucket where the results will be saved.
+        :param query_id: The unique identifier for the query or batch job. This is typically the ID of the evaluator or the specific task being processed.
+        :return: A string representing the full Google Cloud Storage URI for the batch job output.
+        """
         return f"gs://{bucket_name}/{destination_uri}/{query_id}"
 
     @staticmethod
     def create_jsonl_file(query_id: str, initial_prompt: str, query_list: List[str], temperature: float, structured_output_class: Type[BaseModel], system_context: str = "") -> str:
+        """
+        Creates the input JSONL file for batch processing with the specified queries and initial prompt.
+
+        :param query_id: The ID of the query (normally the evaluator's ID). This ID is used to name the JSONL file.
+        :param initial_prompt: The initial prompt to be used for the query, with initial context and the question to be evaluated.
+        :param query_list: The list of responses to be evaluated. Each response will be processed as a separate entry in the JSONL file.
+        :param temperature: The temperature setting for the model, which controls the randomness of the output. A higher temperature results in more random outputs, while a lower temperature makes the output more deterministic.
+        :param structured_output_class: The Pydantic model class that defines the structure of the expected output. This class is used to ensure that the output conforms to a specific JSON schema.
+        :param system_context: Instructional context to be included in the message sequence. This can provide additional guidance or context for the model when processing the queries.
+        :return: The name of the created input JSONL file
+        """
         file_name = f"{query_id}.jsonl"
         with open(file_name, 'w') as f:
             for i in range(1, len(query_list) + 1):
@@ -85,6 +104,12 @@ class GeminiBatchManager(GeminiManager, BatchManager):
 
     @staticmethod
     def convert_to_vertex_compatible_schema(structured_output_class: Type[BaseModel]) -> dict:
+        """
+        Converts a Pydantic model class to a JSON schema compatible with Google Vertex AI batch processing.
+
+        :param structured_output_class: The Pydantic model class that defines the structure of the expected output.
+        :return: A dictionary representing the JSON schema compatible with Google Vertex AI batch processing.
+        """
         raw_schema = structured_output_class.model_json_schema()
         resolved_schema = raw_schema.copy()
         if "$defs" in resolved_schema:
@@ -99,6 +124,12 @@ class GeminiBatchManager(GeminiManager, BatchManager):
         return resolved_schema
 
     def upload_jsonl_to_google_cloud_storage(self, local_file_name: str) -> str:
+        """
+        Uploads a local JSONL file to Google Cloud Storage.
+
+        :param local_file_name: The name of the local JSONL file to be uploaded.
+        :return: A string representing the Google Cloud Storage URI where the file was uploaded.
+        """
         try:
             bucket: Bucket = self.storage_client.bucket(self.bucket_name)
             blob: Blob = bucket.blob(self.destination_uri + "/" + local_file_name)
@@ -108,25 +139,36 @@ class GeminiBatchManager(GeminiManager, BatchManager):
             return gcs_uri
 
         except Exception as e:
-            print(f"Error al subir el archivo: {e}")
-            print("Asegúrate de que el bucket existe y tienes permisos de escritura.")
-            print("Asegúrate de que la ruta del archivo local es correcta.")
+            print(f"Error uploading the file: {e}")
+            print("Make sure the bucket exists and you have write permissions.")
+            print("Ensure the local file path is correct.")
 
     def download_file_from_google_cloud_storage(self, remote_file_name: str) -> str:
+        """
+        Downloads a JSONL file from Google Cloud Storage to the local filesystem.
+
+        :param remote_file_name: The name of the file in Google Cloud Storage to be downloaded.
+        :return: A string representing the local file name where the JSONL file was downloaded.
+        """
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
         blob: Blob = bucket.blob(self.output_uri + "/" + remote_file_name)
         jsonl = "resultado_batch.jsonl"
         blob.download_to_filename(jsonl)
-        print(f"Archivo {remote_file_name} descargado a {jsonl}")
+        print(f"File {remote_file_name} downloaded to {jsonl}")
         return jsonl
 
     def delete_jsonl_file(self, local_file_name: str):
+        """
+        Deletes a local JSONL file.
+
+        :param local_file_name: The name of the local JSONL file to be deleted.
+        """
         try:
             os.remove(local_file_name)
-            print(f"Archivo {local_file_name} eliminado.")
+            print(f"File {local_file_name} deleted.")
         except Exception as e:
-            print(f"Error al eliminar el archivo: {e}")
-            print("Asegúrate de que la ruta del archivo local es correcta.")
+           print(f"Error deleting the file: {e}")
+           print("Make sure the local file path is correct.")
 
     def get_response(self, task: LanguageModelTask, timeout: int, retry: int) -> List[LanguageModelResponse]:
         if self.responses is not None:
@@ -160,7 +202,13 @@ class GeminiBatchManager(GeminiManager, BatchManager):
         self.responses = llm_responses
         return llm_responses
 
-    def find_jsonl_in_gcs(self, gcs_uri: str):
+    def find_jsonl_in_gcs(self, gcs_uri: str) -> List[dict]:
+        """
+        Finds and extracts JSON objects from a JSONL file stored in Google Cloud Storage.
+
+        :param gcs_uri: The Google Cloud Storage URI of the JSONL file to be processed. This should be in the format "gs://bucket_name/path/to/file.jsonl".
+        :return: A list of dictionaries representing the JSON objects extracted from the JSONL file.
+        """
         bucket: Bucket = self.storage_client.bucket(self.bucket_name)
         blobs = bucket.list_blobs(prefix=gcs_uri.replace("gs://", "").split("/", 1)[1])
         json_list = []
