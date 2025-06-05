@@ -9,8 +9,8 @@ import os
 import sys
 
 project = 'EVALIA'
-copyright = '2025, José Miguel Santos and Cayetano Guerra'
-author = 'José Miguel Santos and Cayetano Guerra'
+copyright = '2025, José Miguel Santos, Cayetano Guerra and Pedro Romero Suárez'
+author = 'José Miguel Santos, Cayetano Guerra and Pedro Romero Suárez'
 release = '1.0.0'
 
 # -- General configuration ---------------------------------------------------
