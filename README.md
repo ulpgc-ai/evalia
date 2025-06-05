@@ -24,11 +24,12 @@ Otros valores pueden ser "Tier 2", "Tier 3", "Tier 4" y "Tier 5".
 
 #### Gemini
 * `GOOGLE_API_KEY`. Para poder utilizar la API de Gemini (Google).
-* `GOOGLE_CLOUD_PROJECT`: Id del proyecto de Google Cloud, necesario para poder usar el procesamiento por lotes de Gemini. Por ejemplo, "gen-lang-client-123456".
-* `GOOGLE_CLOUD_LOCATION`: Ubicación del proyecto de Google Cloud, necesario para poder usar el procesamiento por lotes de Gemini. Por ejemplo, "europe-west1" o "us-central1".
+* `GOOGLE_CLOUD_PROJECT`: Id del proyecto de Google Cloud. Por ejemplo, "gen-lang-client-123456".
+* `GOOGLE_CLOUD_LOCATION`: Ubicación del proyecto de Google Cloud. Por ejemplo, "europe-west1" o "us-central1".
 * `GOOGLE_CLOUD_STORAGE_BUCKET_NAME`: Nombre del bucket de Google Cloud Storage donde se guardarán los ficheros temporales de procesamiento por lotes de Gemini. Por ejemplo, "evalia-test".
 * `GOOGLE_CLOUD_STORAGE_JSONL_DESTINATION_URI`: El directorio dentro del bucket en el que se guardará el JSONL de entrada.
 * `GOOGLE_CLOUD_STORAGE_BATCH_OUTPUT_URI`: El directorio dentro del bucket en el que se guardará el JSONL de salida.
+
 #### Claude
 * `ANTHROPIC_API_KEY`. Para poder utilizar la API de Anthropic (Claude).
 
