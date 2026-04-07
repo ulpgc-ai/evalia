@@ -3,7 +3,15 @@
 Módulo Python para asistir en evaluación por IA, apoyada en la API de OpenAI (GPT).
 
 ---
-© Universidad de Las Palmas de Gran Canaria, 2023-2025. Todos los derechos reservados.
+© Universidad de Las Palmas de Gran Canaria, 2023-2025.
+
+## Licencia de uso
+
+Este proyecto se publica bajo la __licencia MIT__. Consulta el archivo [LICENSE](LICENSE) para más detalles.
+
+_El archivo LICENSE está redactado en inglés, que es el único texto legalmente vinculante._
+_A modo informativo: esta licencia te permite usar, copiar, modificar y distribuir_
+_este software libremente, siempre que incluyas el aviso de copyright original._
 
 ## Configuración
 
