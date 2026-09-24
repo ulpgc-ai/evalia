@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch
+from openai import AuthenticationError
 from evalia.gpt_manager.gpt_smart_manager import Request, RequestQueue, HistoryRecord, GPTSmartManager
 import time
 import random
@@ -65,6 +66,13 @@ class TestRequestQueue(unittest.TestCase):
 
 
 class TestGPTManager(unittest.TestCase):
+
+    @patch('evalia.gpt_manager.gpt_smart_manager.OPENAI_API_KEY', 'invalid-api-key')
+    def test_invalid_api_key_is_managed(self):
+        gpt_manager = GPTSmartManager(model="gpt-4")
+
+        with self.assertRaises(AuthenticationError):
+            gpt_manager.query([{"role": "user", "content": "Hola"}])
 
     @patch('openai.chat.completions.create', side_effect=mock_chat_completion_create)
     def test_basic_interaction(self, mock_chat_completion_create):

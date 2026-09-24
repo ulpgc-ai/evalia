@@ -10,6 +10,7 @@ from . import GPTManager, GPTTask
 from ..logs import get_logger
 
 from openai import OpenAI
+from openai import APITimeoutError, APIConnectionError, RateLimitError
 import time
 import copy
 import tiktoken
@@ -18,6 +19,7 @@ import os
 from dataclasses import dataclass
 
 ONE_MINUTE = 60  # One minute in seconds
+RETRY_TIMEOUT_IF_ERROR = 5
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
@@ -269,12 +271,15 @@ class GPTSmartManager(GPTManager):
                     temperature=self.temperature,
                     )
                 chat_successful = True
-            except Exception as e:
-                log_message = f"{self.query_id} Ha ocurrido un error: {e}"
+            except (APITimeoutError, APIConnectionError, RateLimitError) as e:
+                log_message = f"{self.query_id} Retryable error in OpenAI service. Retrying. Error: {e}"
                 print(log_message)
                 logger.error(log_message)
                 chat_successful = False
-                time.sleep(5)
+                time.sleep(RETRY_TIMEOUT_IF_ERROR)
+            except:
+                raise
+
         
         elapsed_time = round(time.time() - self.request_queue.queue[-1].time, 3)
         print(f"{self.query_id} Time: {elapsed_time} seconds")
