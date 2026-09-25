@@ -1,9 +1,11 @@
 import unittest
+from unittest.mock import patch
 
 import pandas as pd
 from evalia.evaluators import Evaluator
 from evalia.prompts import PromptFromString
 from evalia.gpt_manager import GPTManager, GPTSmartManager, GPTBatchManager
+from evalia.gpt_manager.gpt_smart_manager import RequestQueue
 
 # Usamos un modelo mock para no generar interacción con OpenAI
 MODELO_GPT = 'gpt-4o-mini'
@@ -46,7 +48,12 @@ class TestEvaluator(unittest.TestCase):
             query_batch_length=20
         )
     
-    def test_init_gpt_manager(self):
+    # GPTSmartManager descubre sus límites reales en el constructor (una
+    # petición mínima a OpenAI): se mockea para que este test de "cableado"
+    # (qué clase de gestor se instancia según los parámetros) siga sin tocar
+    # la red, tal y como indica el comentario de MODELO_GPT más arriba.
+    @patch.object(RequestQueue, '_discover_limits', return_value=(500, 10_000))
+    def test_init_gpt_manager(self, _mock_discover_limits):
         evaluator1 = Evaluator()
         self.assertEqual(evaluator1.gpt_manager, None)
         evaluator1.batch_api = True
