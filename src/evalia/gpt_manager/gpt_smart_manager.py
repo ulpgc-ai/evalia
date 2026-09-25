@@ -16,68 +16,16 @@ import copy
 import tiktoken
 import datetime
 import os
-from dataclasses import dataclass
 
 ONE_MINUTE = 60  # One minute in seconds
 RETRY_TIMEOUT_IF_ERROR = 5
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
-# Tier level of OpenAI account
-# Used to set limits for tokens and requests per minute
-OPENAI_TIER = os.getenv('OPENAI_TIER', 'tier 1')
-
 # Logging
 logger = get_logger(__name__)
 
 HistoryRecord = namedtuple('HistoryRecord', ['request', 'time', 'tokens_in_last_minute', 'requests_in_last_minute'])
-
-# Dataclass to declare tier-N limits: 
-# requests per minute (rpm) and tokens per minute (tpm)
-@dataclass(frozen=True)
-class OpenAILimits:
-    rpm: int
-    tpm: int
-
-# Values taken from https://platform.openai.com/docs/guides/rate-limits/usage-tiers?context=tier-one
-# updated: 2024-10-08
-OPENAI_LIMITS = {
-    'tier 1': {
-        'gpt-4o': OpenAILimits(rpm=500, tpm=30_000),
-        'gpt-4o-mini': OpenAILimits(rpm=500, tpm=200_000),
-        'gpt-4-turbo': OpenAILimits(rpm=500, tpm=30_000),
-        'gpt-4': OpenAILimits(rpm=500, tpm=10_000),
-        'gpt-3.5-turbo': OpenAILimits(rpm=3500, tpm=200_000),
-    },
-    'tier 2': {
-        'gpt-4o': OpenAILimits(rpm=5000, tpm=450_000),
-        'gpt-4o-mini': OpenAILimits(rpm=5000, tpm=2_000_000),
-        'gpt-4-turbo': OpenAILimits(rpm=5000, tpm=450_000),
-        'gpt-4': OpenAILimits(rpm=5000, tpm=40_000),
-        'gpt-3.5-turbo': OpenAILimits(rpm=3500, tpm=2_000_000),
-    },
-    'tier 3': {
-        'gpt-4o': OpenAILimits(rpm=5000, tpm=800_000),
-        'gpt-4o-mini': OpenAILimits(rpm=5000, tpm=4_000_000),
-        'gpt-4-turbo': OpenAILimits(rpm=5000, tpm=600_000),
-        'gpt-4': OpenAILimits(rpm=5000, tpm=80_000),
-        'gpt-3.5-turbo': OpenAILimits(rpm=3500, tpm=4_000_000),
-    },
-    'tier 4': {
-        'gpt-4o': OpenAILimits(rpm=10_000, tpm=2_000_000),
-        'gpt-4o-mini': OpenAILimits(rpm=10_000, tpm=10_000_000),
-        'gpt-4-turbo': OpenAILimits(rpm=10_000, tpm=800_000),
-        'gpt-4': OpenAILimits(rpm=10_000, tpm=300_000),
-        'gpt-3.5-turbo': OpenAILimits(rpm=10_000, tpm=10_000_000),
-    },
-    'tier 5': {
-        'gpt-4o': OpenAILimits(rpm=10_000, tpm=30_000_000),
-        'gpt-4o-mini': OpenAILimits(rpm=30_000, tpm=150_000_000),
-        'gpt-4-turbo': OpenAILimits(rpm=10_000, tpm=2_000_000),
-        'gpt-4': OpenAILimits(rpm=10_000, tpm=1_000_000),
-        'gpt-3.5-turbo': OpenAILimits(rpm=10_000, tpm=50_000_000),
-    },
-}
 
 
 class Request:
@@ -93,9 +41,17 @@ class Request:
 
 
 class RequestQueue:
-    """Class to store a queue of Requests instances."""
+    """
+    This object stores a queue of Request instances.
+    The RequestQueue is responsible for discovering and enforcing 
+    the real limits (RPM/TPM) of the OpenAI account for a specific model.
 
-    def __init__(self, model):
+    The RPM/TPM limits are obtained by sending a minimal request to OpenAI and
+    reading the headers `x-ratelimit-limit-requests` / `x-ratelimit-limit-tokens`
+    from the response.
+    """
+
+    def __init__(self, model, client):
         self.queue = deque()
         self.current_minute_tokens = 0
         self.current_minute_requests = 0
@@ -103,20 +59,41 @@ class RequestQueue:
         self.start_time = None
         self.model = model
 
-        ONE_MINUTE = 60  # One minute in seconds
-        OFFSET = 0.95  # 5% offset
-        def cut_limit(nominal_limit):
-            return int(nominal_limit * OFFSET)
-        limits = OPENAI_LIMITS[OPENAI_TIER][model]
+        self.rpm, self.tpm = self._discover_limits(client)
 
-        self.rpm = cut_limit(limits.rpm)
-        self.tpm = cut_limit(limits.tpm)
-
-        logger.info( (
-            f"RequestQueue created for model {model}, "
-            f"{OPENAI_TIER}. Limits: {limits}."
+        logger.info((
+            f"RequestQueue created for model {model}. "
+            f"Limits: rpm={self.rpm}, tpm={self.tpm}."
         ))
-  
+
+    def _discover_limits(self, client):
+        """Discover the RPM/TPM limits by sending a minimal request to the model.
+        """
+
+        _DISCOVERY_MESSAGES = [{"role": "user", "content": "ping"}]
+        _DISCOVERY_MAX_TOKENS = 1
+
+        # Security margin over the nominal limit reported by OpenAI
+        OFFSET = 0.95
+
+        raw_response = client.chat.completions.with_raw_response.create(
+            model=self.model,
+            messages=_DISCOVERY_MESSAGES,
+            max_tokens=_DISCOVERY_MAX_TOKENS,
+        )
+        rpm = int(int(raw_response.headers["x-ratelimit-limit-requests"]) * OFFSET)
+        tpm = int(int(raw_response.headers["x-ratelimit-limit-tokens"]) * OFFSET)
+
+        """
+        The discovery request consumes resources (one request and some tokens), so
+        it is recorded in the queue like any other, so that subsequent contention
+        does not overlook it.
+        """
+        self.start_time = time.time()
+        self._record(Request(raw_response.parse().usage.total_tokens))
+
+        return rpm, tpm
+
     def __repr__(self):
         return f"RequestQueue(tokens={self.current_minute_tokens}, queue={self.queue})"
     
@@ -143,8 +120,12 @@ class RequestQueue:
                 f"We will wait {ONE_MINUTE - (time.time() - self.queue[0].time)} seconds."
                 ))
             # Wait until the first request is more than one minute old.
-            time.sleep(max(ONE_MINUTE - (time.time() - self.queue[0].time), 0))  
+            time.sleep(max(ONE_MINUTE - (time.time() - self.queue[0].time), 0))
 
+        self._record(request)
+
+    def _record(self, request):
+        """Contabiliza una petición ya aceptada: cuenta y guarda su historial."""
         self.queue.append(request)
         self.current_minute_tokens += request.tokens
         self.current_minute_requests += 1
@@ -153,15 +134,14 @@ class RequestQueue:
             f"Tokens in last minute: {self.current_minute_tokens}, "
             f"Requests in last minute: {self.current_minute_requests}"
             ))
-        
+
         hr = HistoryRecord(
-            request=copy.deepcopy(request), 
+            request=copy.deepcopy(request),
             time=time.time() - self.start_time,
             tokens_in_last_minute=self.current_minute_tokens,
             requests_in_last_minute=self.current_minute_requests
         )
         self.history.append(hr)
-        
 
     def remove_more_than_one_minute_old(self):
         while len(self.queue) > 0 and self.queue[0].time < (time.time() - ONE_MINUTE):
@@ -197,10 +177,10 @@ class GPTSmartManager(GPTManager):
         self.message = []
         self.prelude = None
         self._initialize_encoding()
-        self.request_queue = RequestQueue(model)
 
         self.client = OpenAI(api_key=OPENAI_API_KEY)
-        
+        self.request_queue = RequestQueue(model, self.client)
+
         logger.info(f"-----------------------------------")
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
