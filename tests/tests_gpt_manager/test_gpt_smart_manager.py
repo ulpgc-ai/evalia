@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import patch
-from openai import AuthenticationError
+from openai import AuthenticationError, BadRequestError
 from openai.resources.chat.completions import Completions
 from openai.types.chat import ChatCompletion
 from evalia.gpt_manager.gpt_smart_manager import Request, RequestQueue, HistoryRecord, GPTSmartManager
@@ -129,6 +129,36 @@ class TestGPTManager(unittest.TestCase):
                 query_list=[{"role" : "user", "content" : "Hola"}, "bad query"],
                temperature=0.0
                  )
+
+
+class TestDiscoverLimits(unittest.TestCase):
+    """El constructor de GPTSmartManager descubre los límites RPM/TPM con una
+    petición mínima real al modelo. Esa petición tiene que ser válida para
+    todos los modelos, incluidos los gpt-5*. Usan la API real de OpenAI."""
+
+    def _assert_manager_can_be_created(self, model):
+        try:
+            gpt_manager = GPTSmartManager(model=model)
+        except BadRequestError as e:
+            self.fail(f'GPTSmartManager(model="{model}") no se pudo crear: {e}')
+        self.assertGreater(gpt_manager.request_queue.rpm, 0)
+        self.assertGreater(gpt_manager.request_queue.tpm, 0)
+
+    #@high_cost
+    def test_discover_limits_gpt4(self):
+        # Control: con un modelo anterior, el descubrimiento funciona
+        self._assert_manager_can_be_created("gpt-4o-mini")
+
+    #@high_cost
+    def test_discover_limits_gpt5(self):
+        for model in ("gpt-5", "gpt-5-mini", "gpt-5.1", "gpt-5.5"):
+            with self.subTest(model=model):
+                self._assert_manager_can_be_created(model)
+
+    def test_discover_limits_gpt6(self):
+        for model in ("gpt-6-sol", "gpt-6-luna", "gpt-6-astra"):
+            with self.subTest(model=model):
+                self._assert_manager_can_be_created(model)
 
 if __name__ == '__main__':
     unittest.main()
