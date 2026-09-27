@@ -10,7 +10,7 @@ from . import GPTManager, GPTTask
 from ..logs import get_logger
 
 from openai import OpenAI
-from openai import APITimeoutError, APIConnectionError, RateLimitError
+from openai import APITimeoutError, APIConnectionError, RateLimitError, BadRequestError
 import time
 import copy
 import tiktoken
@@ -68,21 +68,39 @@ class RequestQueue:
 
     def _discover_limits(self, client):
         """Discover the RPM/TPM limits by sending a minimal request to the model.
+
+        Only the rate limit headers of the response matter, and OpenAI also
+        sends them in 400 responses. So a 400 is accepted if it carries them,
+        e.g. when a reasoning model (gpt-5) spends the whole token budget
+        reasoning and the API answers "Could not finish the message because
+        max_tokens or model output limit was reached" (it happens randomly).
         """
 
         _DISCOVERY_MESSAGES = [{"role": "user", "content": "ping"}]
-        _DISCOVERY_MAX_TOKENS = 1
+        _DISCOVERY_MAX_TOKENS = 32
+        _LIMIT_HEADERS = ("x-ratelimit-limit-requests", "x-ratelimit-limit-tokens")
 
         # Security margin over the nominal limit reported by OpenAI
         OFFSET = 0.95
 
-        raw_response = client.chat.completions.with_raw_response.create(
-            model=self.model,
-            messages=_DISCOVERY_MESSAGES,
-            max_tokens=_DISCOVERY_MAX_TOKENS,
-        )
-        rpm = int(int(raw_response.headers["x-ratelimit-limit-requests"]) * OFFSET)
-        tpm = int(int(raw_response.headers["x-ratelimit-limit-tokens"]) * OFFSET)
+        try:
+            raw_response = client.chat.completions.with_raw_response.create(
+                model=self.model,
+                messages=_DISCOVERY_MESSAGES,
+                max_completion_tokens=_DISCOVERY_MAX_TOKENS,
+            )
+            headers = raw_response.headers
+            used_tokens = raw_response.parse().usage.total_tokens
+        except BadRequestError as e:
+            if not all(h in e.response.headers for h in _LIMIT_HEADERS):
+                raise
+            logger.info(f"Limits of model {self.model} read from a 400 response: {e.message}")
+            headers = e.response.headers
+            # The error response has no usage: assume the whole budget was spent
+            used_tokens = _DISCOVERY_MAX_TOKENS
+
+        rpm = int(int(headers["x-ratelimit-limit-requests"]) * OFFSET)
+        tpm = int(int(headers["x-ratelimit-limit-tokens"]) * OFFSET)
 
         """
         The discovery request consumes resources (one request and some tokens), so
@@ -90,7 +108,7 @@ class RequestQueue:
         does not overlook it.
         """
         self.start_time = time.time()
-        self._record(Request(raw_response.parse().usage.total_tokens))
+        self._record(Request(used_tokens))
 
         return rpm, tpm
 
@@ -185,11 +203,14 @@ class GPTSmartManager(GPTManager):
         logger.info(f"GPTSmartManager started. Model: {self.model}")
 
     def _initialize_encoding(self):
-        if self.model.startswith("gpt-4"):
-            self.encoding = tiktoken.get_encoding("cl100k_base")
-        else:
+        try:
             self.encoding = tiktoken.encoding_for_model(self.model)
-            # self.encoding = tiktoken.get_encoding(self.model)
+        except KeyError:
+            # Model unknown to tiktoken (e.g. newer than the installed
+            # version): o200k_base, the tokenizer of the gpt-5 family, is
+            # a good enough estimate to enforce the rate limits
+            logger.info(f"tiktoken does not know model {self.model}: using o200k_base")
+            self.encoding = tiktoken.get_encoding("o200k_base")
 
     def initialize(self):
         pass
