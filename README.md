@@ -3,7 +3,7 @@
 Módulo Python para asistir en evaluación por IA, apoyada en la API de OpenAI (GPT).
 
 ---
-© Universidad de Las Palmas de Gran Canaria, 2023-2025.
+© Universidad de Las Palmas de Gran Canaria, 2023-2026.
 
 ## Licencia de uso
 

@@ -5,7 +5,7 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y sig
 
 ---
 
-## [Sin publicar]
+## [0.3.0] - 2026-09-28
 ### Añadido
 - `GPTSmartManager` (modo síncrono) funciona con cualquier modelo de OpenAI, incluidos gpt-5.x y gpt-6.
   Antes solo admitía los modelos de una tabla interna de límites: gpt-3.5-turbo, gpt-4, gpt-4-turbo,
