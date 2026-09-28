@@ -4,6 +4,29 @@ Todas las modificaciones importantes de este proyecto quedan documentadas en est
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y sigue [Semantic Versioning](https://semver.org/).
 
 ---
+## [Sin publicar]
+### Añadido
+- `Evaluator.create_or_resume(evaluator_id, factory=None)`: 
+  Recupera el evaluador guardado previamente con ese id (archivo pickle).
+  Si no hay ninguno guardado, crea uno nuevo con `factory(evaluator_id)`. 
+  Si se omite _factory_ se usa el constructor de la propia clase, que debe soportar
+  construirse solo con un parámetro "id". 
+  Si se reanuda desde pickle no se ejecutan ni el constructor ni la _factory_, y se avisa por consola.
+- `Evaluator.discard_saved(evaluator_id)`: borra el evaluador guardado (el archivo pickle).
+- Atributo de clase `GPTManager.requires_persistence` (verdadero en `GPTBatchManager`): indica si el
+  evaluador debe persistir para poder reanudar la tarea más tarde.
+
+### Cambiado
+- El evaluador solo se guarda en disco si su manager lo necesita (Batch API). Antes se guardaba siempre,
+  también en modo síncrono: un programa con `@Evaluator.persistent` que se volvía a ejecutar recuperaba
+  las respuestas ya obtenidas. Ahora, en modo síncrono, la persistencia no tiene ningún efecto.
+- Errores claros al crear o reanudar un evaluador guardado: si es de otra clase (p. ej. dos evaluaciones
+  con el mismo id), si el evaluador creado tiene otro id o si el fichero guardado no se puede leer.
+
+### Obsoleto
+- `@Evaluator.persistent`: usar `Evaluator.create_or_resume(id, factory)`. Sigue funcionando, con un
+  aviso `DeprecationWarning` y las mismas comprobaciones que `create_or_resume()`.
+
 
 ## [0.3.0] - 2026-09-28
 ### Añadido
