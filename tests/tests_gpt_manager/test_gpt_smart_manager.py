@@ -1,44 +1,43 @@
 import unittest
 from unittest.mock import patch
-from openai import AuthenticationError
+from openai import AuthenticationError, BadRequestError
+from openai.resources.chat.completions import Completions
+from openai.types.chat import ChatCompletion
 from evalia.gpt_manager.gpt_smart_manager import Request, RequestQueue, HistoryRecord, GPTSmartManager
-import time
-import random
+from evalia.gpt_manager.gpt_manager import accepts_temperature
+from .utils import high_cost
+
+# El `create` real del SDK, para espiar las peticiones sin sustituirlas
+_real_create = Completions.create
 
 
-class GPTExcepcionError(Exception):
-    pass
+# Límites (rpm, tpm) simulados para los tests que no ponen a prueba el
+# descubrimiento de límites en sí (eso lo cubre TestRequestQueue): así no
+# dependen de la red ni de una clave de API real.
+FAKE_LIMITS = (500, 10_000)
 
-def mock_chat_completion_create(model, messages):
-    time.sleep(2)
-    print("------------------------------------------------------------------------")
-    print(" Mocking chat completion create ")
-    print("------------------------------------------------------------------------")
-    json = {
-            "choices": [
-                {
-                "finish_reason": "stop",
-                "index": 0,
-                "message": {
-                    "content": "\u00a1Hola! \u00bfEn qu\u00e9 puedo ayudarte hoy?",
-                    "role": "assistant"
-                }
-                }
-            ],
-            "created": 1697920381,
-            "id": "chatcmpl-8CCwXw1ilJeHwUJ8KQHl8zxQVsskB",
-            "model": "gpt-3.5-turbo-0613",
-            "object": "chat.completion",
-            "usage": {
-                "completion_tokens": 11,
-                "prompt_tokens": 8,
-                "total_tokens": 19
-            }
-    }
-    if random.random() < 0.5:
-        raise GPTExcepcionError("Ha habido una excepción desde la API de GPT")
-    return json
-        
+
+def _fake_chat_completion(content="¡Hola! ¿En qué puedo ayudarte hoy?"):
+    """Respuesta de OpenAI simulada, usando el propio tipo del SDK para que
+    se comporte como una respuesta real (acceso por atributos, no por claves)."""
+    return ChatCompletion(
+        id="chatcmpl-test",
+        object="chat.completion",
+        created=1697920381,
+        model="gpt-3.5-turbo-0613",
+        choices=[{
+            "index": 0,
+            "finish_reason": "stop",
+            "message": {"role": "assistant", "content": content},
+        }],
+        usage={"prompt_tokens": 8, "completion_tokens": 11, "total_tokens": 19},
+    )
+
+
+def _mock_create(self, *args, **kwargs):
+    """Sustituye a `Completions.create` (afecta también a `with_raw_response.create`)."""
+    return _fake_chat_completion()
+
 
 class TestRequest(unittest.TestCase):
     def test_request(self):
@@ -49,16 +48,18 @@ class TestRequest(unittest.TestCase):
 class TestRequestQueue(unittest.TestCase):
 
     # Check that request not exceeding the maximum tokens is accepted
-    def test_requestqueue_1(self):
-        rq = RequestQueue("gpt-4")
+    @patch.object(RequestQueue, '_discover_limits', return_value=FAKE_LIMITS)
+    def test_requestqueue_1(self, _mock_discover_limits):
+        rq = RequestQueue("gpt-4", client=None)
         with self.assertRaises(Exception) as context:
             rq.add(Request(150_000_000))
         self.assertTrue("tokens exceeds the maximum" in str(context.exception))
 
     # Check that the current minute tokens are calculated correctly
     @unittest.skip("Not neccesary")
-    def test_requestqueue_2(self):
-        rq = RequestQueue("gpt-4")
+    @patch.object(RequestQueue, '_discover_limits', return_value=FAKE_LIMITS)
+    def test_requestqueue_2(self, _mock_discover_limits):
+        rq = RequestQueue("gpt-4", client=None)
         rq.add(Request(1000))
         rq.add(Request(2000))
         rq.add(Request(3000))
@@ -67,29 +68,33 @@ class TestRequestQueue(unittest.TestCase):
 
 class TestGPTManager(unittest.TestCase):
 
+    @high_cost
     @patch('evalia.gpt_manager.gpt_smart_manager.OPENAI_API_KEY', 'invalid-api-key')
     def test_invalid_api_key_is_managed(self):
-        gpt_manager = GPTSmartManager(model="gpt-4")
-
+        # Con la clave inválida, el propio descubrimiento de límites en el
+        # constructor falla al autenticarse contra la API real de OpenAI.
         with self.assertRaises(AuthenticationError):
-            gpt_manager.query([{"role": "user", "content": "Hola"}])
+            GPTSmartManager(model="gpt-4")
 
-    @patch('openai.chat.completions.create', side_effect=mock_chat_completion_create)
-    def test_basic_interaction(self, mock_chat_completion_create):
+    @patch.object(RequestQueue, '_discover_limits', return_value=FAKE_LIMITS)
+    @patch.object(Completions, 'create', new=_mock_create)
+    def test_basic_interaction(self, _mock_discover_limits):
         gpt_manager = GPTSmartManager(model="gpt-4")
-        for _ in range(10):
-            response = gpt_manager.query([{"role": "user", "content": "Hola"}])
-        
+        response = gpt_manager.query([{"role": "user", "content": "Hola"}])
+
         # check that the response contains the word "hola"
         self.assertIn("Hola", response[0].choices[0].message.content)
         self.assertEqual(response[0].choices[0].finish_reason, "stop")
 
-    def test_bad_message(self):
+    @patch.object(RequestQueue, '_discover_limits', return_value=FAKE_LIMITS)
+    def test_bad_message(self, _mock_discover_limits):
         gpt_manager = GPTSmartManager(model="gpt-4")
         with self.assertRaises(Exception) as context:
             response = gpt_manager.query("this is a wrongly formatted message")
 
-    def test_send_queries(self):
+    @patch.object(RequestQueue, '_discover_limits', return_value=FAKE_LIMITS)
+    @patch.object(Completions, 'create', new=_mock_create)
+    def test_send_queries(self, _mock_discover_limits):
         gpt_manager = GPTSmartManager(model="gpt-4")
         query_list = [
             [{"role" : "user", "content" : "Hola"}],
@@ -107,13 +112,14 @@ class TestGPTManager(unittest.TestCase):
         self.assertIn("output_tokens", stats)
         self.assertIn("elapsed_time", stats)
 
-    def test_bad_queries(self):
+    @patch.object(RequestQueue, '_discover_limits', return_value=FAKE_LIMITS)
+    def test_bad_queries(self, _mock_discover_limits):
         gpt_manager = GPTSmartManager(model="gpt-4")
         with self.assertRaises(Exception) as context:
             response = gpt_manager.send_queries(
                 query_id="test",
                 query_list= None,
-                temperature=0.0       
+                temperature=0.0
                 )
         with self.assertRaises(Exception) as context:
             response = gpt_manager.send_queries(
@@ -127,6 +133,69 @@ class TestGPTManager(unittest.TestCase):
                 query_list=[{"role" : "user", "content" : "Hola"}, "bad query"],
                temperature=0.0
                  )
-        
+
+
+class TestDiscoverLimits(unittest.TestCase):
+    """El constructor de GPTSmartManager descubre los límites RPM/TPM con una
+    petición mínima real al modelo. Esa petición tiene que ser válida para
+    todos los modelos, incluidos los gpt-5*. Usan la API real de OpenAI."""
+
+    def _assert_manager_can_be_created(self, model):
+        try:
+            gpt_manager = GPTSmartManager(model=model)
+        except BadRequestError as e:
+            self.fail(f'GPTSmartManager(model="{model}") no se pudo crear: {e}')
+        self.assertGreater(gpt_manager.request_queue.rpm, 0)
+        self.assertGreater(gpt_manager.request_queue.tpm, 0)
+
+    #@high_cost
+    def test_discover_limits_gpt4(self):
+        # Control: con un modelo anterior, el descubrimiento funciona
+        self._assert_manager_can_be_created("gpt-4o-mini")
+
+    #@high_cost
+    def test_discover_limits_gpt5(self):
+        for model in ("gpt-5", "gpt-5-mini", "gpt-5.1", "gpt-5.5"):
+            with self.subTest(model=model):
+                self._assert_manager_can_be_created(model)
+
+    def test_discover_limits_gpt6(self):
+        for model in ("gpt-6-sol", "gpt-6-luna", "gpt-6-astra"):
+            with self.subTest(model=model):
+                self._assert_manager_can_be_created(model)
+
+
+class TestTemperature(unittest.TestCase):
+    """PARCHE TEMPORAL: los modelos de razonamiento
+    solo admiten la temperatura por defecto, así que a ellos no se les envía."""
+
+    def test_accepts_temperature(self):
+        for model in ("gpt-3.5-turbo", "gpt-4", "gpt-4o-mini", "gpt-4.1", "gpt-5.1"):
+            self.assertTrue(accepts_temperature(model), model)
+        for model in ("gpt-5", "gpt-5-mini", "gpt-5.5", "gpt-5.6-sol", "gpt-6-sol"):
+            self.assertFalse(accepts_temperature(model), model)
+
+    def test_query_with_temperature(self):
+        # Usa la API real. El espía deja pasar las peticiones y permite
+        # comprobar si llevaban la temperatura.
+        cases = (
+            ("gpt-4o-mini", True),
+            ("gpt-5.1", True),
+            ("gpt-5.5", False),
+            ("gpt-6-sol", False),
+        )
+        for model, temperature_sent in cases:
+            with self.subTest(model=model), \
+                 patch.object(Completions, "create", autospec=True, side_effect=_real_create) as spy:
+                gpt_manager = GPTSmartManager(model=model)
+                responses, _ = gpt_manager.send_queries(
+                    query_id="test_temperature",
+                    query_list=[[{"role": "user", "content": "ping"}]],
+                    temperature=0.0,
+                )
+                self.assertEqual(len(responses), 1)
+                # La última petición es la consulta (antes va el descubrimiento de límites)
+                self.assertEqual("temperature" in spy.call_args.kwargs, temperature_sent)
+
 if __name__ == '__main__':
     unittest.main()

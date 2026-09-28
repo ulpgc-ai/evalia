@@ -7,6 +7,7 @@ from .utils import high_cost
 import time
 import random
 import ast
+import json
 import os
 
 QUERIES_FILE = "query-4ESO-17-deunaenuna.txt"
@@ -53,6 +54,24 @@ class TestGPTBatchManager(unittest.TestCase):
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[0])
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[1])
         self.assertEqual(jsonl_filename, f"{query_id}.jsonl")
+
+
+    def test_build_jsonl_file_without_temperature(self):
+        # PARCHE TEMPORAL (ver temperatura_2026.md): a los modelos que solo
+        # admiten la temperatura por defecto no se les envía
+        gpt_manager = GPTBatchManager(model="gpt-5.5")
+        query_id = "test_build_jsonl_file_without_temperature"
+        query_list = [[{"role": "user", "content": "Hola"}]]
+
+        with patch("evalia.gpt_manager.gpt_batch_manager.open", mock_open(), create=True) as mock_file, \
+             patch("os.path.getsize", return_value=1000):
+            gpt_manager._build_jsonl_file(query_id, query_list, 0.7)
+
+        json_line = mock_file().write.call_args_list[0].args[0]
+        body = json.loads(json_line)["body"]
+        self.assertEqual(body["model"], "gpt-5.5")
+        self.assertEqual(body["messages"], query_list[0])
+        self.assertNotIn("temperature", body)
 
 
     def test_start_task(self):
