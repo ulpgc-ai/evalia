@@ -15,6 +15,7 @@ from typing import Tuple
 from openai import OpenAI
 from openai.types.chat.chat_completion import ChatCompletion
 from . import GPTManager, GPTTask
+from .gpt_manager import accepts_temperature
 import os
 import json
 import time
@@ -102,10 +103,20 @@ class GPTBatchManager(GPTManager):
                 '{{ "custom_id": "{custom_id}", "method": "POST", '
                 '"url": "/v1/chat/completions", '
                 '"body": '
-                  '{{ "model": "{model}", "temperature": {temperature}, '
+                  '{{ "model": "{model}", {temperature_field}'
                      '"messages": {messages} }} '
                 '}}'
             )
+
+            # Temperature only for the models that accept it (see accepts_temperature)
+            if accepts_temperature(self.model):
+                temperature_field = f'"temperature": {temperature}, '
+            else:
+                temperature_field = ''
+                logger.info((
+                    f'"{query_id}" Model {self.model} only supports the default '
+                    f'temperature: temperature={temperature} is not sent'
+                    ))
 
             jsonl_filename = f"{query_id}.jsonl"
             query_counter = 1
@@ -114,7 +125,7 @@ class GPTBatchManager(GPTManager):
                     json_line = JSONL_TEMPLATE.format(
                         custom_id=query_counter,
                         model=self.model,
-                        temperature=temperature,
+                        temperature_field=temperature_field,
                         messages=json.dumps(query)
                     )
                     f.write(json_line)

@@ -5,6 +5,19 @@ Clase abstracta que modela una interfaz para dialogar con GPT
 from abc import ABC, abstractmethod
 from typing import Tuple
 
+# PARCHE TEMPORAL: los modelos de razonamiento
+# (gpt-5, gpt-5.5, gpt-6...) solo admiten la temperatura por defecto (1) y
+# devuelven un error 400 con cualquier otro valor. 
+# Para evitar problemas, solo se envía la temperatura a los modelos 
+# que se ha comprobado que la aceptan; el resto usa su valor por defecto. 
+# gpt-5.1 la acepta mientras no razone, y Evalia
+# no activa su razonamiento, al menos de momento.
+MODELS_ACCEPTING_TEMPERATURE = ("gpt-3.5", "gpt-4", "gpt-5.1")
+
+def accepts_temperature(model: str) -> bool:
+  '''True si el modelo admite una temperatura distinta de la de por defecto.'''
+  return model.startswith(MODELS_ACCEPTING_TEMPERATURE)
+
 class GPTTask(ABC):
   '''Clase abstracta que modela una tarea solicitada a GPT.
 

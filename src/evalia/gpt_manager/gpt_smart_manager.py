@@ -7,6 +7,7 @@ Implementation of a GPT Manager class to handle the OpenAI API restrictions.
 from collections import deque, namedtuple
 from typing import Tuple
 from . import GPTManager, GPTTask
+from .gpt_manager import accepts_temperature
 from ..logs import get_logger
 
 from openai import OpenAI
@@ -232,6 +233,11 @@ class GPTSmartManager(GPTManager):
         self.temperature = temperature
         self.query_id = query_id
         if isinstance(query_list, list) and all(isinstance(elem, list) for elem in query_list):
+            if not accepts_temperature(self.model):
+                logger.info((
+                    f'"{query_id}" Model {self.model} only supports the default '
+                    f'temperature: temperature={temperature} is not sent'
+                    ))
             input_tokens = 0
             output_tokens = 0
             elapsed_time = 0
@@ -263,13 +269,18 @@ class GPTSmartManager(GPTManager):
         nt = self.count_tokens(messages)  # Calculate the number of tokens in the message
         self.request_queue.add(Request(nt + 6))  # Request creation with 6 extra tokens from the answer prompt
 
+        # Temperature only for the models that accept it (see accepts_temperature)
+        optional_params = {}
+        if accepts_temperature(self.model):
+            optional_params["temperature"] = self.temperature
+
         chat_successful = False
         while not chat_successful:
             try:
                 chat_completion = self.client.chat.completions.create(
                     model=self.model,
                     messages=messages,
-                    temperature=self.temperature,
+                    **optional_params,
                     )
                 chat_successful = True
             except (APITimeoutError, APIConnectionError, RateLimitError) as e:
