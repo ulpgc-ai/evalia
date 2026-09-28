@@ -57,7 +57,7 @@ class RequestQueue:
         self.current_minute_tokens = 0
         self.current_minute_requests = 0
         self.history = []
-        self.start_time = None
+        self.start_time = time.time()  # Reference time of the history records
         self.model = model
 
         self.rpm, self.tpm = self._discover_limits(client)
@@ -108,7 +108,6 @@ class RequestQueue:
         it is recorded in the queue like any other, so that subsequent contention
         does not overlook it.
         """
-        self.start_time = time.time()
         self._record(Request(used_tokens))
 
         return rpm, tpm
@@ -123,9 +122,6 @@ class RequestQueue:
         """Add a request to the queue."""
         if request.tokens > self.tpm:
             raise Exception(f"Request with {request.tokens} tokens exceeds the maximum of {self.tpm} tokens per minute.")
-
-        if self.start_time is None:
-            self.start_time = time.time()  # Set the start time of the queue.
 
         while (self.tokens_in_last_minute() + request.tokens) > self.tpm or (self.requests_in_last_minute()) > self.rpm:
             print("TPM:", self.tokens_in_last_minute() + request.tokens)
