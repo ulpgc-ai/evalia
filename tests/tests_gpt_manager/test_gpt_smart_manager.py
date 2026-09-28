@@ -4,7 +4,11 @@ from openai import AuthenticationError, BadRequestError
 from openai.resources.chat.completions import Completions
 from openai.types.chat import ChatCompletion
 from evalia.gpt_manager.gpt_smart_manager import Request, RequestQueue, HistoryRecord, GPTSmartManager
+from evalia.gpt_manager.gpt_manager import accepts_temperature
 from .utils import high_cost
+
+# El `create` real del SDK, para espiar las peticiones sin sustituirlas
+_real_create = Completions.create
 
 
 # Límites (rpm, tpm) simulados para los tests que no ponen a prueba el
@@ -159,6 +163,39 @@ class TestDiscoverLimits(unittest.TestCase):
         for model in ("gpt-6-sol", "gpt-6-luna", "gpt-6-astra"):
             with self.subTest(model=model):
                 self._assert_manager_can_be_created(model)
+
+
+class TestTemperature(unittest.TestCase):
+    """PARCHE TEMPORAL: los modelos de razonamiento
+    solo admiten la temperatura por defecto, así que a ellos no se les envía."""
+
+    def test_accepts_temperature(self):
+        for model in ("gpt-3.5-turbo", "gpt-4", "gpt-4o-mini", "gpt-4.1", "gpt-5.1"):
+            self.assertTrue(accepts_temperature(model), model)
+        for model in ("gpt-5", "gpt-5-mini", "gpt-5.5", "gpt-5.6-sol", "gpt-6-sol"):
+            self.assertFalse(accepts_temperature(model), model)
+
+    def test_query_with_temperature(self):
+        # Usa la API real. El espía deja pasar las peticiones y permite
+        # comprobar si llevaban la temperatura.
+        cases = (
+            ("gpt-4o-mini", True),
+            ("gpt-5.1", True),
+            ("gpt-5.5", False),
+            ("gpt-6-sol", False),
+        )
+        for model, temperature_sent in cases:
+            with self.subTest(model=model), \
+                 patch.object(Completions, "create", autospec=True, side_effect=_real_create) as spy:
+                gpt_manager = GPTSmartManager(model=model)
+                responses, _ = gpt_manager.send_queries(
+                    query_id="test_temperature",
+                    query_list=[[{"role": "user", "content": "ping"}]],
+                    temperature=0.0,
+                )
+                self.assertEqual(len(responses), 1)
+                # La última petición es la consulta (antes va el descubrimiento de límites)
+                self.assertEqual("temperature" in spy.call_args.kwargs, temperature_sent)
 
 if __name__ == '__main__':
     unittest.main()
