@@ -12,3 +12,4 @@ api_key
 build
 **/*.egg-info/
 
+.vscode/launch.json

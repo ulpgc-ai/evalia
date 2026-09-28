@@ -40,6 +40,10 @@ class GPTBatchManager(GPTManager):
         def __init__(self, batch_id):
             self.batch_id = batch_id
 
+    # La tarea vive en OpenAI hasta 24h, independiente de este proceso:
+    # hace falta persistir el Evaluator para poder recuperarla más tarde.
+    requires_persistence = True
+
     def __init__(self,model=""):
         self.initialize(model)
         self.batch_api = True
@@ -252,6 +256,6 @@ def get_response_from_task(batch_id):
 
 
 if __name__ == "__main__":
-   #test_gpt_batch()
-   get_response_from_task("batch_6720b8474d988190bb6f5d95caa05619")
+   test_gpt_batch()
+   #get_response_from_task("batch_6720b8474d988190bb6f5d95caa05619")
    pass

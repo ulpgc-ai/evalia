@@ -15,6 +15,14 @@ class GPTTask(ABC):
 
 class GPTManager(ABC):
 
+  # Si un GPTManager concreto necesita sobrevivir a un reinicio del proceso
+  # (p. ej. porque delega en una tarea externa de larga duración, como la
+  # Batch API de OpenAI), debe declarar requires_persistence = True.
+  # Es un atributo de clase (no depende de __init__) para que el Evaluator
+  # pueda consultarlo sin necesidad de conocer la implementación concreta
+  # del manager, y sin depender de que el manager llame a super().__init__().
+  requires_persistence: bool = False
+
   def __init__(self):
     self.model = ""
     self.batch_api = False

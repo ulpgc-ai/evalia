@@ -35,13 +35,15 @@ estos métodos.
 """
 
 from abc import ABC, abstractmethod
-from typing import Type
+from typing import Callable, Type, TypeVar
+import inspect
 import time
 import pandas as pd
 import os
 import re
 import json
 import pickle
+import warnings
 
 from evalia.logs import get_logger
 from evalia.prompts import PromptSource
@@ -60,6 +62,9 @@ GPT_TIMEOUT = 0
 
 # Tiempo de espera para reintentar obtener respuesta de GPT (segundos)
 GPT_RETRY = 1
+
+# Tipo de la clase concreta (Evaluator o subclase) en create_or_resume()
+EvaluatorT = TypeVar("EvaluatorT", bound="Evaluator")
 
 
 class AbstractEvaluator(ABC):
@@ -137,12 +142,12 @@ class Evaluator(AbstractEvaluator):
 
     def __init__ (self, 
                   evaluator_id='',
-                  student_responses: pd.DataFrame = None,
+                  student_responses: pd.DataFrame | None = None,
                   responses_column: int | str = 0,
-                  prompt: PromptSource = None,
+                  prompt: PromptSource | None = None,
                   sample_selector = None,
-                  gpt_manager: str | GPTManager = None,
-                  model: str = None,
+                  gpt_manager: str | GPTManager | None = None,
+                  model: str | None = None,
                   batch_api: bool = False,
                   query_batch_length=20,
                   gpt_response_class: Type[GPTResponse] = GPTResponseOneLine
@@ -305,25 +310,125 @@ class Evaluator(AbstractEvaluator):
         self.gpt_manager = state['_gpt_manager']
         self.model = self.gpt_manager.model
 
-    # PERSISTENCE DECORATOR
+    # CONSTRUCTOR DE OBJETO PERSISTENTE: 
+    # recupera el evaluador guardado en disco o, si no hay ninguno, crea uno nuevo. 
     @classmethod
-    def persistent(cls,func):
-        '''Decorator that loads the evaluator from a pickle file if it exists'''
-        def f(item_id):
-            eva = Evaluator.load_from_file(item_id)
-            if eva is None:
-                return func(item_id)
-            else:
-                return eva
-        return f
-    
+    def create_or_resume(
+        cls: type[EvaluatorT],
+        evaluator_id: str,
+        factory: Callable[[str], EvaluatorT] | None = None
+    ) -> EvaluatorT:
+        '''Recupera el evaluador guardado con este evaluator_id o, si no hay
+        ninguno, crea uno nuevo llamando a factory(evaluator_id).
+
+        Args:
+
+        - evaluator_id: identificador del evaluador. También da nombre al
+          fichero donde se guarda, así que debe ser único para cada evaluación.
+        - factory: recibe el id y devuelve un evaluador nuevo (una función,
+          una lambda, un functools.partial o una clase). Solo se llama si no
+          hay nada guardado. Si se omite, se usa la propia clase, que en ese
+          caso debe tener un constructor propio al que le baste con el id.
+
+        Al reanudar se recupera el ESTADO guardado (prompt, respuestas, modelo,
+        tarea en curso...), pero los MÉTODOS son los del código actual: un
+        cambio en postprocess_one_gpt_response() se aplica, pero un cambio en
+        el prompt o en los datos no. Para empezar de cero, discard_saved().
+
+        El evaluador solo se guarda si su manager lo necesita (p. ej. la
+        Batch API). Con un manager síncrono no se guarda nada.
+
+        Ejemplos:
+
+            evaluador = Evaluador.create_or_resume("capitales")
+
+            evaluador = Evaluator.create_or_resume(
+                "capitales",
+                lambda id: Evaluator(id, prompt=..., student_responses=...))
+        '''
+        filename = cls.pickle_filename(evaluator_id)
+        try:
+            loaded = cls.load_from_file(evaluator_id)
+        except Exception as e:
+            raise RuntimeError(
+                f'No se pudo recuperar "{evaluator_id}" de "{filename}": {e!r}. '
+                f'Si ya no lo necesitas: Evaluator.discard_saved("{evaluator_id}")'
+                ) from e
+        if loaded is not None:
+            if not isinstance(loaded, cls):
+                raise TypeError(
+                    f'"{evaluator_id}" está guardado como {type(loaded).__name__}, '
+                    f'no como {cls.__name__}. '
+                    f'¿Dos evaluadores distintos usan el mismo id?'
+                    )
+            print(f'"{evaluator_id}": reanudado desde "{filename}"')
+            return loaded
+
+        if factory is not None:
+            evaluator = factory(evaluator_id)
+        else:
+            cls._check_id_only_constructor()
+            evaluator = cls(evaluator_id)
+        if not isinstance(evaluator, cls):
+            raise TypeError(
+                f'La factory devolvió un {type(evaluator).__name__}, '
+                f'no un {cls.__name__}'
+                )
+        if evaluator.evaluator_id != evaluator_id:
+            raise ValueError(
+                f'El evaluador creado tiene evaluator_id="{evaluator.evaluator_id}" '
+                f'en lugar de "{evaluator_id}": no se podría reanudar'
+                )
+        return evaluator
+
+    @classmethod
+    def _check_id_only_constructor(cls):
+        '''Comprueba que la clase tiene constructor propio y le basta con el id.'''
+        if cls.__init__ is not Evaluator.__init__:
+            try:
+                inspect.signature(cls).bind("id")
+                return
+            except TypeError:
+                pass
+        raise TypeError(
+            f'{cls.__name__} necesita algo más que el id para crearse. '
+            f'Pasa una factory: '
+            f'{cls.__name__}.create_or_resume(id, lambda id: {cls.__name__}(id, ...))'
+            )
+
+    @classmethod
+    def discard_saved(cls, evaluator_id: str) -> bool:
+        '''Borra el evaluador guardado con este id, para que la próxima vez
+        create_or_resume() cree uno nuevo. Devuelve True si había uno.
+
+        No cancela su tarea si sigue en curso en el proveedor (p. ej. un
+        batch de OpenAI): seguiría ejecutándose y facturándose.'''
+        filename = cls.pickle_filename(evaluator_id)
+        if os.path.exists(filename):
+            os.remove(filename)
+            logger.debug(f'"{evaluator_id}" discarded: file "{filename}" removed')
+            return True
+        return False
+
+    # DECORADOR OBSOLETO: se mantiene para no romper los programas que lo
+    # usan. La función decorada, func(id) -> evaluador, es una factory.
+    @classmethod
+    def persistent(cls, func):
+        '''Obsoleto: usa create_or_resume(id, factory).'''
+        warnings.warn(
+            "Evaluator.persistent está obsoleto: usa Evaluator.create_or_resume(id, factory)",
+            DeprecationWarning, stacklevel=2)
+        return lambda item_id: Evaluator.create_or_resume(item_id, func)
+
     ### --- end of persistence section
     
     def build_prompt_preamble(self):
+        assert self.prompt is not None
         return self.prompt.get_prompt()
         
     def read_sample_answers(self):
-        '''Lee una muestra de respuestas de los estudiantes''' 
+        '''Lee una muestra de respuestas de los estudiantes'''
+        assert self.student_responses is not None
         if self.sample_answers is None:
             if self.sample_selector is None:
                 self.sample_answers = self.student_responses
@@ -403,10 +508,14 @@ class Evaluator(AbstractEvaluator):
         if self.task is None:
             self.build_gpt_queries()
             self.task = self.gpt_manager.start_task(
-                self.evaluator_id, 
-                self.queries, 
+                self.evaluator_id,
+                self.queries,
                 self.temperature)
-            self._persist_evaluator()  
+            # Solo persiste si el manager lo necesita (p. ej. Batch API):
+            # es una tarea externa de larga duración que puede sobrevivir
+            # a un reinicio del proceso. El manager síncrono no lo necesita.
+            if self.gpt_manager.requires_persistence:
+                self._persist_evaluator()
         return self.task
 
     def receive_gpt_responses_new(self):

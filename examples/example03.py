@@ -83,14 +83,16 @@ class Evaluador(Evaluator):
         except:
             return None
 
-# El decorador "persistent" guarda el estado del objeto en un archivo
-# y permite reanudar la ejecución en otro momento.
-# La reanudación se hace volviendo a ejecutar este mismo programa.
-@Evaluator.persistent
-def evaluador_persistente(id_evaluador):
-    return Evaluador(id_evaluador)
-
-evaluador = evaluador_persistente("capitales europeas")
+# create_or_resume() recupera el evaluador guardado con este id o, si no hay
+# ninguno, crea uno nuevo con Evaluador(id): como su constructor solo necesita
+# el id, no hace falta pasar una factory.
+# El estado se guarda en un archivo (solo si el manager lo necesita, como la
+# Batch API), así que la ejecución se reanuda volviendo a ejecutar este mismo
+# programa. 
+# # Si se desea volver a empezar desde cero:
+# - en código, llamar a: Evaluator.discard_saved("ejemplo03-capitales")
+# - a mano, borrar el archivo "ejemplo03-capitales.pkl" en el dir. de cachés
+evaluador = Evaluador.create_or_resume("ejemplo03-capitales")
 df_result = evaluador.run()
 
 print("Resultados:")

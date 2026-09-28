@@ -20,9 +20,7 @@ class TestGPTBatchManager(unittest.TestCase):
         directorio_del_script = os.path.dirname(os.path.abspath(__file__))
         os.chdir(directorio_del_script)
 
-    @patch("os.path.getsize", return_value=1000)
-    @patch("builtins.open", new_callable=mock_open)
-    def test_build_jsonl_file(self, mock_file, mock_getsize):
+    def test_build_jsonl_file(self):
         gpt_manager = GPTBatchManager(model="gpt-4o-mini")
         query_id = "test_build_jsonl_file"
         query_list = [
@@ -44,9 +42,12 @@ class TestGPTBatchManager(unittest.TestCase):
             '"messages": [{"role": "user", "content": "How do you do?"}] } }\n'
         )
 
-        # Mocked file writing and checking file size
-        jsonl_filename = gpt_manager._build_jsonl_file(query_id, query_list, temperature)
-
+        # Solo se simula open() dentro de gpt_batch_manager: parchear
+        # builtins.open afectaría también a otras bibliotecas (p. ej. al
+        # cliente de OpenAI, que lee ficheros del sistema al importarse).
+        with patch("evalia.gpt_manager.gpt_batch_manager.open", mock_open(), create=True) as mock_file, \
+             patch("os.path.getsize", return_value=1000):
+            jsonl_filename = gpt_manager._build_jsonl_file(query_id, query_list, temperature)
 
         mock_file.assert_called_once_with(f"{query_id}.jsonl", "w")
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[0])

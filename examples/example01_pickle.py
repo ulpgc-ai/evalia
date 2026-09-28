@@ -47,17 +47,25 @@ respuestas_estudiantes = {
 }
 
 
-
-evaluador = Evaluator.load_from_file("capitales europeas")
-if evaluador is None:
-    evaluador = Evaluator(
-        evaluator_id = "capitales europeas",
+# Función fábrica: recibe el id y crea un evaluador nuevo.
+# create_or_resume() solo la llama si no hay ningún evaluador guardado con
+# ese id; si lo hay, lo recupera tal cual, sin llamarla.
+def nuevo_evaluador(id):
+    return Evaluator(
+        evaluator_id = id,
         student_responses = pd.DataFrame(respuestas_estudiantes),
         prompt = PromptFromString(PROMPT),
         gpt_manager = MODELO_GPT,
         batch_api=True,
         query_batch_length=20 # envía a GPT las respuestas en lotes de 20
     )
+
+# Con la Batch API, el evaluador se guarda en un archivo tras lanzar el lote,
+# así que la ejecución se reanuda volviendo a ejecutar este mismo programa.
+# Si se desea volver a empezar desde cero:
+# - en código, llamar a: Evaluator.discard_saved("ejemplo01-capitales")
+# - a mano, borrar el archivo "ejemplo01-capitales.pkl" en el dir. de cachés
+evaluador = Evaluator.create_or_resume("ejemplo01-capitales", nuevo_evaluador)
 
 
 # Ejecuta la evaluación y devuelve un dataframe con el resultado
