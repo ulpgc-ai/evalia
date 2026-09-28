@@ -4,7 +4,7 @@ Todas las modificaciones importantes de este proyecto quedan documentadas en est
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y sigue [Semantic Versioning](https://semver.org/).
 
 ---
-## [Sin publicar]
+## [0.4.0] - 2026-09-28
 ### Añadido
 - `Evaluator.create_or_resume(evaluator_id, factory=None)`: 
   Recupera el evaluador guardado previamente con ese id (archivo pickle).

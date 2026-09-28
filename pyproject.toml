@@ -4,11 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evalia"
-version = "0.3.0"
+version = "0.4.0"
 description = "EVALIA - Evaluación con IA"
 authors = [
     { name = "José Miguel Santos", email = "josemiguel.santos@ulpgc.es" },
-    { name = "Cayetano Guerra", email = "cayetano.guerra@ulpgc.es" }
+    { name = "Cayetano Guerra", email = "cayetano.guerra@ulpgc.es" },
+    { name = "Pedro Romero Suárez", email = "pedro.romero105@alu.ulpgc.es" }
 ]
 readme = "README.md"
 license = { text = "MIT" }
