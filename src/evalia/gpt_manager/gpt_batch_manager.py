@@ -20,6 +20,7 @@ import os
 import json
 import time
 from ..logs import get_logger
+from ..config import cache_dir
 
 # OpenAI limits
 MAX_REQUESTS_PER_BATCH = 50_000
@@ -122,7 +123,8 @@ class GPTBatchManager(GPTManager):
                     f'temperature: temperature={temperature} is not sent'
                     ))
 
-            jsonl_filename = f"{query_id}.jsonl"
+            # Archivo temporal: se borra en cuanto se sube a OpenAI
+            jsonl_filename = os.path.join(cache_dir(), f"{query_id}.jsonl")
             query_counter = 1
             with open(jsonl_filename, "w") as f:
                 for query in query_list:

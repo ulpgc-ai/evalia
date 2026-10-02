@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch, mock_open
 
 from evalia.gpt_manager.gpt_batch_manager import GPTBatchManager
+from evalia.config import cache_dir
 from .utils import high_cost
 
 import time
@@ -50,10 +51,12 @@ class TestGPTBatchManager(unittest.TestCase):
              patch("os.path.getsize", return_value=1000):
             jsonl_filename = gpt_manager._build_jsonl_file(query_id, query_list, temperature)
 
-        mock_file.assert_called_once_with(f"{query_id}.jsonl", "w")
+        # El archivo temporal va al directorio de caché, no al directorio de trabajo
+        expected_filename = os.path.join(cache_dir(), f"{query_id}.jsonl")
+        mock_file.assert_called_once_with(expected_filename, "w")
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[0])
         mock_file().write.assert_any_call(expected_jsonl_content.split('\n')[1])
-        self.assertEqual(jsonl_filename, f"{query_id}.jsonl")
+        self.assertEqual(jsonl_filename, expected_filename)
 
 
     def test_build_jsonl_file_without_temperature(self):
