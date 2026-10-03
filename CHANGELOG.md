@@ -4,6 +4,21 @@ Todas las modificaciones importantes de este proyecto quedan documentadas en est
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y sigue [Semantic Versioning](https://semver.org/).
 
 ---
+## [0.5.0] - AAAA-MM-DD
+### Añadido
+- `Evaluator(..., autosave_gpt_responses=True)`: permite desactivar la copia automática de las
+  respuestas de GPT (`<evaluator_id>_gpt_responses.json`, junto a los pickles).
+- `save_gpt_responses(filename=None)`: guarda la copia a mano, en la ruta por defecto o en otra.
+- `Evaluator.delete_gpt_responses(evaluator_id)`: borra la copia. `discard_saved()` no la borra.
+
+### Cambiado
+- El JSONL temporal de la Batch API se crea en el directorio de caché, no en el de trabajo.
+- Si falla el guardado automático, se avisa en el log. Antes el error se ignoraba.
+
+### Arreglado
+- `rerun_gpt_responses()` fallaba con `AttributeError` al leer el JSON guardado.
+
+
 ## [0.4.0] - 2026-09-28
 ### Añadido
 - `Evaluator.create_or_resume(evaluator_id, factory=None)`: 

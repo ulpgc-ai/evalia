@@ -1,5 +1,7 @@
 import io
+import json
 import os
+import tempfile
 import unittest
 from contextlib import redirect_stdout
 from functools import partial
@@ -10,6 +12,7 @@ from evalia.evaluators import Evaluator
 from evalia.prompts import PromptFromString
 from evalia.gpt_manager import GPTManager, GPTSmartManager, GPTBatchManager, GPTMockManager
 from evalia.gpt_manager.gpt_smart_manager import RequestQueue
+from evalia.gpt_manager.gpt_mock_manager import chat_completion_mock, mock_stats
 
 # Usamos un modelo mock para no generar interacción con OpenAI
 MODELO_GPT = 'gpt-4o-mini'
@@ -339,6 +342,162 @@ class TestPersistence(unittest.TestCase):
         evaluator.send_gpt_queries()
         mock_start_task.assert_called_once()
         self.assertTrue(os.path.exists(Evaluator.pickle_filename(evaluator_id)))
+
+
+class TestGptResponses(unittest.TestCase):
+    """Copia de las respuestas de GPT en un JSON (save_gpt_responses y autosave_gpt_responses)."""
+
+    def setUp(self):
+        self._evaluator_ids = []
+
+    def tearDown(self):
+        for evaluator_id in self._evaluator_ids:
+            self._remove_files(evaluator_id)
+
+    @staticmethod
+    def _remove_files(evaluator_id):
+        for filename in (Evaluator.gpt_responses_filename(evaluator_id),
+                         Evaluator.pickle_filename(evaluator_id)):
+            try:
+                os.remove(filename)
+            except OSError:
+                pass
+
+    def _fresh_id(self, name):
+        '''Id de evaluador único por test, sin ficheros previos y ya registrado para limpieza.'''
+        self._evaluator_ids.append(name)
+        self._remove_files(name)
+        return name
+
+    def _new_evaluator(self, evaluator_id, **kwargs):
+        return Evaluator(
+            evaluator_id=evaluator_id,
+            student_responses=pd.DataFrame(respuestas_estudiantes),
+            prompt=PromptFromString(PROMPT),
+            gpt_manager='mock',
+            **kwargs,
+        )
+
+    def _load_saved(self, evaluator_id):
+        with open(Evaluator.gpt_responses_filename(evaluator_id)) as f:
+            return json.load(f)
+
+    def test_saves_gpt_responses_by_default(self):
+        # Tanto con run() como llamando directamente a process_gpt_responses(),
+        # que recibe las respuestas por el camino antiguo (receive_gpt_responses)
+        for method in ("run", "process_gpt_responses"):
+            with self.subTest(method=method):
+                evaluator_id = self._fresh_id(f"test_gpt_responses_saved_{method}")
+                evaluator = self._new_evaluator(evaluator_id)
+                getattr(evaluator, method)()
+                saved = self._load_saved(evaluator_id)
+                self.assertEqual(len(saved), len(evaluator.gpt_responses))
+                self.assertEqual(
+                    saved[0]["choices"][0]["message"]["content"],
+                    evaluator.gpt_responses[0].choices[0].message.content)
+
+    def test_does_not_save_gpt_responses_if_autosave_disabled(self):
+        evaluator_id = self._fresh_id("test_gpt_responses_disabled")
+        self._new_evaluator(evaluator_id, autosave_gpt_responses=False).run()
+        self.assertFalse(os.path.exists(Evaluator.gpt_responses_filename(evaluator_id)))
+
+    def test_save_gpt_responses_manually(self):
+        # Sin guardado automático, el usuario decide guardar al ver los resultados
+        evaluator_id = self._fresh_id("test_gpt_responses_manual")
+        evaluator = self._new_evaluator(evaluator_id, autosave_gpt_responses=False)
+        evaluator.run()
+        evaluator.save_gpt_responses()
+        self.assertEqual(len(self._load_saved(evaluator_id)), len(evaluator.gpt_responses))
+
+    def test_save_gpt_responses_to_other_file(self):
+        evaluator_id = self._fresh_id("test_gpt_responses_other_file")
+        evaluator = self._new_evaluator(evaluator_id, autosave_gpt_responses=False)
+        evaluator.run()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filename = os.path.join(tmpdir, "copia.json")
+            evaluator.save_gpt_responses(filename)
+            self.assertTrue(os.path.exists(filename))
+        self.assertFalse(os.path.exists(Evaluator.gpt_responses_filename(evaluator_id)))
+
+    def test_save_gpt_responses_before_receiving_them(self):
+        evaluator = self._new_evaluator(self._fresh_id("test_gpt_responses_none"))
+        with self.assertRaises(ValueError):
+            evaluator.save_gpt_responses()
+
+    def test_autosave_failure_does_not_stop_evaluation(self):
+        # Si no se puede guardar la copia, se avisa en el log y la evaluación sigue
+        evaluator_id = self._fresh_id("test_gpt_responses_autosave_failure")
+        evaluator = self._new_evaluator(evaluator_id)
+        with patch.object(Evaluator, 'save_gpt_responses', side_effect=OSError("disco lleno")), \
+             self.assertLogs('evalia.evaluators', level='WARNING'):
+            df_result = evaluator.run()
+        self.assertEqual(df_result.shape[0], 7)
+
+    @patch(
+        'evalia.gpt_manager.gpt_batch_manager.GPTBatchManager.get_response',
+        return_value=([chat_completion_mock], mock_stats),
+    )
+    @patch(
+        'evalia.gpt_manager.gpt_batch_manager.GPTBatchManager.start_task',
+        return_value=GPTBatchManager.GPTBatchTask("fake_batch_id"),
+    )
+    def test_saves_gpt_responses_with_batch_manager(self, _mock_start_task, _mock_get_response):
+        evaluator_id = self._fresh_id("test_gpt_responses_batch")
+        evaluator = Evaluator(
+            evaluator_id=evaluator_id,
+            student_responses=pd.DataFrame(respuestas_estudiantes),
+            prompt=PromptFromString(PROMPT),
+            gpt_manager=GPTBatchManager(model="gpt-4o-mini"),
+        )
+        evaluator.run()
+        self.assertEqual(self._load_saved(evaluator_id), [chat_completion_mock.model_dump()])
+
+    def test_rerun_gpt_responses_without_calling_gpt(self):
+        evaluator_id = self._fresh_id("test_gpt_responses_rerun")
+        df_original = self._new_evaluator(evaluator_id).run()
+
+        # Otro evaluador con los mismos datos procesa la copia guardada: ni
+        # invoca a GPT ni vuelve a escribir la copia
+        evaluator = self._new_evaluator(evaluator_id)
+        with patch.object(GPTMockManager, 'send_queries',
+                          side_effect=AssertionError("no debe invocar a GPT")), \
+             patch.object(Evaluator, 'save_gpt_responses') as mock_save:
+            df_rerun = evaluator.rerun_gpt_responses(
+                Evaluator.gpt_responses_filename(evaluator_id))
+        mock_save.assert_not_called()
+        pd.testing.assert_frame_equal(df_rerun, df_original)
+
+    def test_delete_gpt_responses(self):
+        evaluator_id = self._fresh_id("test_gpt_responses_delete")
+        self._new_evaluator(evaluator_id).run()
+        self.assertTrue(Evaluator.delete_gpt_responses(evaluator_id))
+        self.assertFalse(os.path.exists(Evaluator.gpt_responses_filename(evaluator_id)))
+        self.assertFalse(Evaluator.delete_gpt_responses(evaluator_id))
+
+    def test_persistence_and_gpt_responses_are_independent(self):
+        # discard_saved() no borra la copia, ni delete_gpt_responses() el evaluador guardado
+        evaluator_id = self._fresh_id("test_gpt_responses_independent")
+        evaluator = self._new_evaluator(evaluator_id)
+        evaluator.run()
+
+        evaluator._persist_evaluator()
+        Evaluator.discard_saved(evaluator_id)
+        self.assertTrue(os.path.exists(Evaluator.gpt_responses_filename(evaluator_id)))
+
+        evaluator._persist_evaluator()
+        Evaluator.delete_gpt_responses(evaluator_id)
+        self.assertTrue(os.path.exists(Evaluator.pickle_filename(evaluator_id)))
+
+    def test_resume_evaluator_saved_without_autosave_gpt_responses(self):
+        # Evaluador guardado con una versión anterior, sin el atributo: al
+        # reanudarlo se sigue guardando la copia, como hasta ahora
+        evaluator_id = self._fresh_id("test_gpt_responses_old_pickle")
+        evaluator = self._new_evaluator(evaluator_id)
+        del evaluator.autosave_gpt_responses
+        evaluator._persist_evaluator()
+        with redirect_stdout(io.StringIO()):
+            resumed = Evaluator.create_or_resume(evaluator_id)
+        self.assertTrue(resumed.autosave_gpt_responses)
 
 
 if __name__ == '__main__':

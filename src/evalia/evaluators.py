@@ -44,6 +44,7 @@ import re
 import json
 import pickle
 import warnings
+from openai.types.chat.chat_completion import ChatCompletion
 
 from evalia.logs import get_logger
 from evalia.prompts import PromptSource
@@ -150,7 +151,8 @@ class Evaluator(AbstractEvaluator):
                   model: str | None = None,
                   batch_api: bool = False,
                   query_batch_length=20,
-                  gpt_response_class: Type[GPTResponse] = GPTResponseOneLine
+                  gpt_response_class: Type[GPTResponse] = GPTResponseOneLine,
+                  autosave_gpt_responses: bool = True
                   ):
         '''
         Args:
@@ -170,6 +172,10 @@ class Evaluator(AbstractEvaluator):
         - query_batch_length: número de respuestas que se empaquetarán en cada consulta a GPT. 
           Vale cualquier valor entero de 1 en adelante.
         - gpt_response_class: modalidad de respuesta de GPT (una línea o varias líneas).
+        - autosave_gpt_responses: si es True (por defecto), al recibir las respuestas de GPT
+          guarda una copia local en un JSON, en el directorio EVALIA_CACHE_DIR.
+          Sirve para diagnosticar problemas o para volver
+          a procesar las respuestas con rerun_gpt_responses() sin invocar de nuevo a GPT.
         '''
         super().__init__()
 
@@ -196,6 +202,7 @@ class Evaluator(AbstractEvaluator):
         self.sample_selector = sample_selector
         self.query_batch_length = query_batch_length
         self.gpt_response_class = gpt_response_class
+        self.autosave_gpt_responses = autosave_gpt_responses
 
         # Reset execution state variables
         self.reset()
@@ -306,6 +313,8 @@ class Evaluator(AbstractEvaluator):
         return state
     
     def __setstate__(self,state):
+        # Evaluadores guardados con versiones anteriores a autosave_gpt_responses
+        state.setdefault('autosave_gpt_responses', True)
         self.__dict__.update(state)
         self.gpt_manager = state['_gpt_manager']
         self.model = self.gpt_manager.model
@@ -421,7 +430,61 @@ class Evaluator(AbstractEvaluator):
         return lambda item_id: Evaluator.create_or_resume(item_id, func)
 
     ### --- end of persistence section
-    
+
+    # --- copia de las respuestas de GPT
+    # Independiente de la persistencia: discard_saved() no borra la copia
+    # y delete_gpt_responses() no borra el evaluador guardado.
+
+    @classmethod
+    def gpt_responses_filename(cls, evaluator_id):
+        '''Fichero con la copia de las respuestas de GPT, en el directorio de caché.'''
+        return os.path.join(cache_dir(), evaluator_id + "_gpt_responses.json")
+
+    def save_gpt_responses(self, filename=None):
+        '''Guarda una copia de las respuestas de GPT en un JSON. Por defecto,
+        en gpt_responses_filename(evaluator_id), que es donde se guardan
+        automáticamente si autosave_gpt_responses es True.
+
+        Se puede volver a procesar con rerun_gpt_responses(), sin invocar
+        de nuevo a GPT.'''
+        if self.gpt_responses is None:
+            raise ValueError(
+                f'"{self.evaluator_id}": todavía no hay respuestas de GPT que guardar'
+                )
+        if filename is None:
+            filename = self.gpt_responses_filename(self.evaluator_id)
+        dictlist = [ x.model_dump() for x in self.gpt_responses ]
+        with open(filename,"w") as f:
+            json.dump(dictlist,f,indent=2)
+        logger.debug(f'"{self.evaluator_id}" GPT responses saved to file "{filename}"')
+
+    # Internal function called when GPT responses are received.
+    # Solo se llama cuando ya han llegado TODAS las respuestas: si la petición
+    # falla a medias, no se guarda nada (todo o nada). Si no se puede guardar,
+    # solo se avisa en el log, para no interrumpir una evaluación ya pagada.
+    def _autosave_gpt_responses(self):
+        if not self.autosave_gpt_responses:
+            return
+        try:
+            self.save_gpt_responses()
+        except Exception as e:
+            logger.warning(f'"{self.evaluator_id}" GPT responses not saved: {e!r}')
+
+    @classmethod
+    def delete_gpt_responses(cls, evaluator_id: str) -> bool:
+        '''Borra la copia de las respuestas de GPT guardada con este id.
+        Devuelve True si había una.
+
+        No borra el evaluador guardado: para eso, discard_saved().'''
+        filename = cls.gpt_responses_filename(evaluator_id)
+        if os.path.exists(filename):
+            os.remove(filename)
+            logger.debug(f'"{evaluator_id}" GPT responses deleted: file "{filename}" removed')
+            return True
+        return False
+
+    # --- end of GPT responses section
+
     def build_prompt_preamble(self):
         assert self.prompt is not None
         return self.prompt.get_prompt()
@@ -525,6 +588,7 @@ class Evaluator(AbstractEvaluator):
                 self.task,
                 GPT_TIMEOUT, GPT_RETRY
                 )
+            self._autosave_gpt_responses()
         return self.gpt_responses
 
     def receive_gpt_responses(self):
@@ -536,6 +600,7 @@ class Evaluator(AbstractEvaluator):
                 query_list=queries,
                 temperature=self.temperature
                 )
+            self._autosave_gpt_responses()
         return self.gpt_responses
         
     def get_stats(self):
@@ -562,17 +627,6 @@ class Evaluator(AbstractEvaluator):
         gpt_text_messages = [ x.choices[0].message.content
                               for x in gpt_responses ]
 
-        def save_gpt_responses(gpt_responses):
-            try:
-                filename = os.path.join(cache_dir(), self.evaluator_id + "_gpt_responses.json")
-                dictlist = [ x.dict() for x in gpt_responses ]
-                with open(filename,"w") as f:
-                    json.dump(dictlist,f,indent=2)
-            except:
-                pass
-        
-        save_gpt_responses(gpt_responses)
-
         # me obliga a usar la clase dos veces: como objeto y también como argumento
         extractor = self.gpt_response_class
         gpt_responses = extractor.extract_responses(extractor,gpt_text_messages)
@@ -593,12 +647,13 @@ class Evaluator(AbstractEvaluator):
     
     def rerun_gpt_responses (self,gpt_responses_file):
         '''
-        Vuelve a procesar las respuestas de GPT recibidas en una 
-        anterior ejecución
+        Vuelve a procesar las respuestas de GPT recibidas en una
+        anterior ejecución, sin invocar de nuevo a GPT.
         '''
         with open(gpt_responses_file,"r") as f:
             gpt_responses = json.load(f)
-        self.gpt_responses = gpt_responses
+        # El JSON guarda diccionarios: se reconstruyen los objetos de OpenAI
+        self.gpt_responses = [ ChatCompletion.model_validate(x) for x in gpt_responses ]
         df_result = self.process_gpt_responses()
         return df_result
 
