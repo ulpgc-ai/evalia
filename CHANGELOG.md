@@ -5,14 +5,18 @@ El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y sig
 
 ---
 ## [0.5.0] - AAAA-MM-DD
+
+Mejora del tratamiento del archivo con las respuestas de GPT.
+
 ### Añadido
 - `Evaluator(..., autosave_gpt_responses=True)`: permite desactivar la copia automática de las
   respuestas de GPT (`<evaluator_id>_gpt_responses.json`, junto a los pickles).
 - `save_gpt_responses(filename=None)`: guarda la copia a mano, en la ruta por defecto o en otra.
-- `Evaluator.delete_gpt_responses(evaluator_id)`: borra la copia. `discard_saved()` no la borra.
+- `Evaluator.delete_gpt_responses(evaluator_id)`: borra la copia.
+- La vida de estos ficheros es independiente de los pickles. `discard_saved()` no borra las respuestas de GPT guardadas.
 
 ### Cambiado
-- El JSONL temporal de la Batch API se crea en el directorio de caché, no en el de trabajo.
+- El JSONL temporal de la Batch API se crea en el directorio de caché, no en el de trabajo como hasta ahora.
 - Si falla el guardado automático, se avisa en el log. Antes el error se ignoraba.
 
 ### Arreglado
