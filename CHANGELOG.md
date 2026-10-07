@@ -4,7 +4,7 @@ Todas las modificaciones importantes de este proyecto quedan documentadas en est
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/) y sigue [Semantic Versioning](https://semver.org/).
 
 ---
-## [0.5.0] - AAAA-MM-DD
+## [0.5.0] - 2026-10-07
 
 Mejora del tratamiento del archivo con las respuestas de GPT.
 
