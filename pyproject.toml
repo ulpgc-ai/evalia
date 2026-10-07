@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "evalia"
-version = "0.4.0"
+version = "0.5.0"
 description = "EVALIA - Evaluación con IA"
 authors = [
     { name = "José Miguel Santos", email = "josemiguel.santos@ulpgc.es" },
